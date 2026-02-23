@@ -157,7 +157,125 @@ class JobRadarAPITester:
         self.log_test("GET /api/jobs - Get job scan results", True if status_code == 200 else False,
                      f"Got status {status_code}" if status_code != 200 else "")
 
-        # Test 10: Job Tracker - Delete test job (cleanup)
+        # Test 10: Wishlist APIs
+        print("\n💝 Testing Wishlist APIs...")
+        success, data, status_code = self.test_api_endpoint('GET', 'wishlist', 200)
+        if success and isinstance(data, list):
+            self.log_test("GET /api/wishlist - Get wishlist", True)
+            print(f"   Found {len(data)} wishlist items")
+        else:
+            self.log_test("GET /api/wishlist - Get wishlist", False, f"Expected wishlist array, got status {status_code}")
+
+        # Create wishlist item
+        wishlist_item = {
+            "title": "Test QA Engineer",
+            "company_type": "Tech Startup",
+            "match_score": 85,
+            "salary_range": "$70k - $90k AUD",
+            "why_match": "Great match for testing skills",
+            "search_keywords": ["QA", "testing", "selenium"]
+        }
+        success, data, status_code = self.test_api_endpoint('POST', 'wishlist', 200, wishlist_item)
+        wishlist_item_id = None
+        if success and data and 'id' in data:
+            wishlist_item_id = data['id']
+            self.log_test("POST /api/wishlist - Create wishlist item", True)
+            print(f"   Created wishlist item with ID: {wishlist_item_id}")
+        else:
+            self.log_test("POST /api/wishlist - Create wishlist item", False, f"Expected item creation, got status {status_code}")
+
+        # Test wishlist apply and delete
+        if wishlist_item_id:
+            success, data, status_code = self.test_api_endpoint('POST', f'wishlist/{wishlist_item_id}/apply', 200)
+            if success:
+                self.log_test("POST /api/wishlist/{id}/apply - Apply from wishlist", True)
+            else:
+                self.log_test("POST /api/wishlist/{id}/apply - Apply from wishlist", False, f"Apply failed, got status {status_code}")
+
+            success, data, status_code = self.test_api_endpoint('DELETE', f'wishlist/{wishlist_item_id}', 200)
+            if success:
+                self.log_test("DELETE /api/wishlist/{id} - Delete wishlist item", True)
+            else:
+                self.log_test("DELETE /api/wishlist/{id} - Delete wishlist item", False, f"Delete failed, got status {status_code}")
+
+        # Test 11: Cron Jobs APIs
+        print("\n⏰ Testing Cron Jobs APIs...")
+        success, data, status_code = self.test_api_endpoint('GET', 'cron/jobs', 200)
+        if success and isinstance(data, list):
+            self.log_test("GET /api/cron/jobs - Get cron jobs", True)
+            print(f"   Found {len(data)} cron jobs")
+        else:
+            self.log_test("GET /api/cron/jobs - Get cron jobs", False, f"Expected cron jobs array, got status {status_code}")
+
+        # Create cron job
+        cron_job = {
+            "title": "Test Backend Developer Search",
+            "keywords": ["python", "fastapi", "backend"],
+            "location": "Australia",
+            "active": True
+        }
+        success, data, status_code = self.test_api_endpoint('POST', 'cron/jobs', 200, cron_job)
+        cron_job_id = None
+        if success and data and 'id' in data:
+            cron_job_id = data['id']
+            self.log_test("POST /api/cron/jobs - Create cron job", True)
+            print(f"   Created cron job with ID: {cron_job_id}")
+        else:
+            self.log_test("POST /api/cron/jobs - Create cron job", False, f"Expected cron job creation, got status {status_code}")
+
+        # Test cron job operations
+        if cron_job_id:
+            # Run cron job (may take time)
+            print("   Running cron job scan (may take 30+ seconds)...")
+            success, data, status_code = self.test_api_endpoint('POST', f'cron/run/{cron_job_id}', 200, {}, None, 120)
+            if success:
+                self.log_test("POST /api/cron/run/{id} - Run cron job", True)
+                print(f"   Scan completed, found {data.get('total_jobs_found', 0)} jobs")
+            else:
+                self.log_test("POST /api/cron/run/{id} - Run cron job", False, f"Cron run failed, got status {status_code}")
+
+            success, data, status_code = self.test_api_endpoint('DELETE', f'cron/jobs/{cron_job_id}', 200)
+            if success:
+                self.log_test("DELETE /api/cron/jobs/{id} - Delete cron job", True)
+            else:
+                self.log_test("DELETE /api/cron/jobs/{id} - Delete cron job", False, f"Delete failed, got status {status_code}")
+
+        # Test 12: Recommendations APIs
+        print("\n🎯 Testing Recommendations APIs...")
+        success, data, status_code = self.test_api_endpoint('POST', 'recommendations/hide?title=Test Job Title', 200)
+        if success:
+            self.log_test("POST /api/recommendations/hide - Hide recommendation", True)
+        else:
+            self.log_test("POST /api/recommendations/hide - Hide recommendation", False, f"Hide failed, got status {status_code}")
+
+        success, data, status_code = self.test_api_endpoint('GET', 'recommendations/hidden', 200)
+        if success and isinstance(data, list):
+            self.log_test("GET /api/recommendations/hidden - Get hidden recommendations", True)
+            print(f"   Found {len(data)} hidden recommendations")
+        else:
+            self.log_test("GET /api/recommendations/hidden - Get hidden recommendations", False, f"Expected hidden list, got status {status_code}")
+
+        # Test 13: Document Generation (requires resume)
+        print("\n📄 Testing Document Generation...")
+        doc_request = {
+            "job_title": "Senior Python Developer",
+            "company_type": "Tech Startup",
+            "salary_range": "$90k - $120k AUD",
+            "why_match": "Perfect match for Python and FastAPI skills",
+            "doc_type": "resume"
+        }
+        print("   Generating documents (may take 30+ seconds)...")
+        success, data, status_code = self.test_api_endpoint('POST', 'documents/generate', 200, doc_request, None, 120)
+        if success and data:
+            self.log_test("POST /api/documents/generate - Generate documents", True)
+            print(f"   Generated documents for: {doc_request['job_title']}")
+        else:
+            error_msg = f"Document generation failed, got status {status_code}"
+            if status_code == 400:
+                error_msg += " (may need resume upload first)"
+            self.log_test("POST /api/documents/generate - Generate documents", False, error_msg)
+
+        # Test 14: Job Tracker - Delete test job (cleanup)
         if created_job_id:
             success, data, status_code = self.test_api_endpoint('DELETE', f'tracker/{created_job_id}', 200)
             if success:
@@ -165,7 +283,7 @@ class JobRadarAPITester:
             else:
                 self.log_test("DELETE /api/tracker/{id} - Delete job", False, f"Delete failed, got status {status_code}")
 
-        # Test 11: API Error Handling - Invalid endpoints
+        # Test 15: API Error Handling - Invalid endpoints
         print("\n❌ Testing Error Handling...")
         success, data, status_code = self.test_api_endpoint('GET', 'nonexistent-endpoint', 404)
         if status_code == 404:

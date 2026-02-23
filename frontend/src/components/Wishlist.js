@@ -39,7 +39,8 @@ export default function Wishlist() {
   const handleApply = async (item) => {
     try {
       await axios.post(`${API}/wishlist/${item.id}/apply`);
-      setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: "applied" } : i));
+      // Remove from local state since backend deletes it
+      setItems(prev => prev.filter(i => i.id !== item.id));
       toast.success(`"${item.title}" added to tracker!`);
     } catch (e) {
       toast.error("Failed to apply");

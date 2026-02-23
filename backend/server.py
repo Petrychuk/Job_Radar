@@ -503,7 +503,7 @@ async def export_tracker():
         if sc in status_colors:
             ws.cell(row=idx+1, column=9).font = Font(color=status_colors[sc], bold=True)
 
-    widths = {'A': 5, 'B': 14, 'C': 25, 'D': 18, 'E': 35, 'F': 15, 'G': 20, 'H': 30, 'I': 12, 'J': 45, 'K': 25, 'L': 30}
+    widths = {'A': 5, 'B': 14, 'C': 25, 'D': 18, 'E': 35, 'F': 15, 'G': 20, 'H': 30, 'I': 12, 'J': 12, 'K': 12, 'L': 12, 'M': 45, 'N': 25, 'O': 30}
     for col_letter, w in widths.items():
         ws.column_dimensions[col_letter].width = w
 

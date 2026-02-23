@@ -89,7 +89,7 @@ class JobRadarAPITester:
         else:
             self.log_test("GET /api/tracker - Get tracked jobs", False, f"Expected jobs array, got status {status_code}")
 
-        # Test 4: Job Tracker - Create new job
+        # Test 4: Job Tracker - Create new job with enhanced fields
         test_job_data = {
             "position": "Test Software Engineer",
             "company": "Test Company Ltd",
@@ -101,7 +101,10 @@ class JobRadarAPITester:
             "source": "Test Site",
             "link": "https://example.com/job/123",
             "contact": "hr@testcompany.com",
-            "notes": "Test job entry for API validation"
+            "notes": "Test job entry for API validation",
+            "work_mode": "Hybrid",
+            "contract_type": "Permanent", 
+            "visa_sponsorship": "482 Sponsor"
         }
 
         success, data, status_code = self.test_api_endpoint('POST', 'tracker', 201, test_job_data)

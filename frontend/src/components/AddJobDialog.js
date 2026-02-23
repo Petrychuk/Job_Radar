@@ -67,6 +67,7 @@ export default function AddJobDialog({ open, onOpenChange, job, onSave }) {
           <DialogTitle className="font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
             {job ? "EDIT" : "ADD"} <span className="text-primary">APPLICATION</span>
           </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">Fill in the job details below</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">

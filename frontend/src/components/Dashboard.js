@@ -33,6 +33,8 @@ export default function Dashboard() {
       case "resume": return <ResumeUpload />;
       case "search": return <JobSearch />;
       case "tracker": return <JobTracker />;
+      case "wishlist": return <Wishlist />;
+      case "cron": return <CronJobs />;
       case "stats": return <Statistics />;
       default: return <JobTracker />;
     }

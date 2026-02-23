@@ -75,9 +75,17 @@ class TrackedJobCreate(BaseModel):
     link: str = ""
     contact: str = ""
     notes: str = ""
-    work_mode: str = ""         # Remote / Hybrid / Onsite
-    contract_type: str = ""     # Permanent / Contract / Casual
-    visa_sponsorship: str = ""  # Yes / No / Unknown / 482 / PR only
+    work_mode: str = ""
+    contract_type: str = ""
+    visa_sponsorship: str = ""
+    date_applied: str = ""
+    response_date: str = ""
+    interview_stages: str = ""
+    rejection_reason: str = ""
+    recruiter_name: str = ""
+    follow_up_date: str = ""
+    linkedin_connection: str = ""
+    cv_profile_used: str = ""
 
 class TrackedJobUpdate(BaseModel):
     date_posted: Optional[str] = None
@@ -95,6 +103,14 @@ class TrackedJobUpdate(BaseModel):
     work_mode: Optional[str] = None
     contract_type: Optional[str] = None
     visa_sponsorship: Optional[str] = None
+    date_applied: Optional[str] = None
+    response_date: Optional[str] = None
+    interview_stages: Optional[str] = None
+    rejection_reason: Optional[str] = None
+    recruiter_name: Optional[str] = None
+    follow_up_date: Optional[str] = None
+    linkedin_connection: Optional[str] = None
+    cv_profile_used: Optional[str] = None
 
 class WishlistItemCreate(BaseModel):
     title: str

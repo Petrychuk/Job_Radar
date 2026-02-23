@@ -419,7 +419,11 @@ async def get_search_links(keyword: str = "software developer"):
         if site.get('active'):
             kw = keyword.replace(' ', '+')
             search_url = site['search_template'].replace('{keyword}', kw)
-            links.append({"site_id": site['id'], "site_name": site['name'], "site_url": site['url'], "search_url": search_url})
+            links.append({"site_id": site['id'], "site_name": site['name'], "site_url": site['url'], "search_url": search_url, "custom": False})
+    # Add custom sites
+    custom_sites = await db.custom_sites.find({}, {"_id": 0}).to_list(100)
+    for cs in custom_sites:
+        links.append({"site_id": cs["id"], "site_name": cs["name"], "site_url": cs["url"], "search_url": cs.get("careers_url", cs["url"]), "custom": True, "category": cs.get("category", "company")})
     return links
 
 # ─── Tracker Routes ───

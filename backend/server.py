@@ -749,7 +749,8 @@ async def delete_custom_site(site_id: str):
 # ─── Wishlist Routes ───
 @api_router.get("/wishlist")
 async def get_wishlist():
-    items = await db.wishlist.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    # Only return saved items, not applied ones
+    items = await db.wishlist.find({"status": {"$ne": "applied"}}, {"_id": 0}).sort("created_at", -1).to_list(1000)
     return items
 
 @api_router.post("/wishlist")

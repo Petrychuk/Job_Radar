@@ -137,7 +137,15 @@ class CustomSiteCreate(BaseModel):
     name: str
     url: str
     careers_url: str
-    category: str = "company"  # company / recruitment / other
+    category: str = "company"
+
+class ATSCheckRequest(BaseModel):
+    job_title: str
+    job_description: str = ""
+    cv_profile_id: str = ""
+
+class SkillGapRequest(BaseModel):
+    target_role: str = ""  # company / recruitment / other
 
 # ─── AI Helper Functions ───
 def parse_ai_json(response_text: str) -> dict:

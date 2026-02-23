@@ -526,6 +526,181 @@ async def get_stats():
 async def get_sites():
     return JOB_SITES
 
+# ─── Wishlist Routes ───
+@api_router.get("/wishlist")
+async def get_wishlist():
+    items = await db.wishlist.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    return items
+
+@api_router.post("/wishlist")
+async def add_to_wishlist(item: WishlistItemCreate):
+    existing = await db.wishlist.find_one({"title": item.title, "status": {"$ne": "hidden"}}, {"_id": 0})
+    if existing:
+        return existing
+    doc = item.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["status"] = "saved"
+    doc["generated_resume"] = None
+    doc["generated_cover_letter"] = None
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.wishlist.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+@api_router.delete("/wishlist/{item_id}")
+async def remove_from_wishlist(item_id: str):
+    result = await db.wishlist.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Removed"}
+
+@api_router.post("/wishlist/{item_id}/apply")
+async def apply_from_wishlist(item_id: str):
+    item = await db.wishlist.find_one({"id": item_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(status_code=404, detail="Wishlist item not found")
+    tracker_doc = {
+        "id": str(uuid.uuid4()),
+        "date_posted": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "company": item.get("company_type", ""),
+        "site_url": "",
+        "position": item.get("title", ""),
+        "salary": item.get("salary_range", ""),
+        "location": "Australia",
+        "technology": ", ".join(item.get("search_keywords", [])),
+        "status": "New",
+        "source": "AI Recommendation",
+        "link": "",
+        "contact": "",
+        "notes": f"Match: {item.get('match_score', 0)}% - {item.get('why_match', '')}",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.tracked_jobs.insert_one(tracker_doc)
+    tracker_doc.pop('_id', None)
+    await db.wishlist.update_one({"id": item_id}, {"$set": {"status": "applied"}})
+    return tracker_doc
+
+@api_router.post("/recommendations/hide")
+async def hide_recommendation(title: str):
+    doc = {"id": str(uuid.uuid4()), "title": title, "hidden_at": datetime.now(timezone.utc).isoformat()}
+    await db.hidden_recommendations.insert_one(doc)
+    return {"message": "Hidden"}
+
+@api_router.get("/recommendations/hidden")
+async def get_hidden():
+    items = await db.hidden_recommendations.find({}, {"_id": 0}).to_list(1000)
+    return [item["title"] for item in items]
+
+# ─── Document Generation Routes ───
+@api_router.post("/documents/generate")
+async def generate_documents(req: DocumentGenerateRequest):
+    resume = await db.resumes.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+    if not resume:
+        raise HTTPException(status_code=400, detail="Upload a resume first")
+    resume_data = resume.get("analysis", {})
+    result = await generate_documents_ai(resume_data, req.job_title, req.company_type, req.salary_range, req.why_match, req.doc_type)
+    doc = {
+        "id": str(uuid.uuid4()),
+        "job_title": req.job_title,
+        "doc_type": req.doc_type,
+        **result,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.generated_documents.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+# ─── Cron Job Routes ───
+@api_router.get("/cron/jobs")
+async def get_cron_jobs():
+    jobs = await db.cron_searches.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    return jobs
+
+@api_router.post("/cron/jobs")
+async def create_cron_job(job: CronJobCreate):
+    doc = job.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["last_run"] = None
+    doc["results_count"] = 0
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.cron_searches.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+@api_router.delete("/cron/jobs/{job_id}")
+async def delete_cron_job(job_id: str):
+    result = await db.cron_searches.delete_one({"id": job_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cron job not found")
+    await db.cron_results.delete_many({"cron_id": job_id})
+    return {"message": "Deleted"}
+
+@api_router.put("/cron/jobs/{job_id}/toggle")
+async def toggle_cron_job(job_id: str):
+    job = await db.cron_searches.find_one({"id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Cron job not found")
+    new_active = not job.get("active", True)
+    await db.cron_searches.update_one({"id": job_id}, {"$set": {"active": new_active}})
+    return {"active": new_active}
+
+@api_router.post("/cron/run/{job_id}")
+async def run_cron_job(job_id: str):
+    job = await db.cron_searches.find_one({"id": job_id}, {"_id": 0})
+    if not job:
+        raise HTTPException(status_code=404, detail="Cron job not found")
+    keywords = job.get("keywords", [])
+    if not keywords:
+        keywords = [job.get("title", "")]
+    semaphore = asyncio.Semaphore(5)
+    tasks = [scrape_single_site(site, keywords, semaphore) for site in JOB_SITES if site.get('active')]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    scan_results = [r for r in results if not isinstance(r, Exception)]
+    total_found = sum(len(r.get('jobs', [])) for r in scan_results)
+    result_doc = {
+        "id": str(uuid.uuid4()),
+        "cron_id": job_id,
+        "keywords": keywords,
+        "results": scan_results,
+        "total_jobs_found": total_found,
+        "run_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.cron_results.insert_one(result_doc)
+    result_doc.pop('_id', None)
+    await db.cron_searches.update_one({"id": job_id}, {"$set": {"last_run": datetime.now(timezone.utc).isoformat(), "results_count": total_found}})
+    return result_doc
+
+@api_router.get("/cron/results/{job_id}")
+async def get_cron_results(job_id: str):
+    results = await db.cron_results.find({"cron_id": job_id}, {"_id": 0}).sort("run_at", -1).to_list(50)
+    return results
+
+@api_router.post("/cron/run-all")
+async def run_all_cron_jobs():
+    active_jobs = await db.cron_searches.find({"active": True}, {"_id": 0}).to_list(100)
+    total_results = []
+    for job in active_jobs:
+        keywords = job.get("keywords", []) or [job.get("title", "")]
+        semaphore = asyncio.Semaphore(5)
+        tasks = [scrape_single_site(site, keywords, semaphore) for site in JOB_SITES if site.get('active')]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        scan_results = [r for r in results if not isinstance(r, Exception)]
+        total_found = sum(len(r.get('jobs', [])) for r in scan_results)
+        result_doc = {
+            "id": str(uuid.uuid4()),
+            "cron_id": job["id"],
+            "keywords": keywords,
+            "results": scan_results,
+            "total_jobs_found": total_found,
+            "run_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.cron_results.insert_one(result_doc)
+        result_doc.pop('_id', None)
+        await db.cron_searches.update_one({"id": job["id"]}, {"$set": {"last_run": datetime.now(timezone.utc).isoformat(), "results_count": total_found}})
+        total_results.append(result_doc)
+    return {"jobs_run": len(total_results), "results": total_results}
+
 # ─── App Setup ───
 app.include_router(api_router)
 

@@ -144,7 +144,7 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
           </h4>
 
           {!generatedDocs ? (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 size="sm" variant="outline"
                 className="border-primary/30 text-primary hover:bg-primary/10"
@@ -172,6 +172,16 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
                 data-testid="generate-cl-btn"
               >
                 Cover Letter Only
+              </Button>
+              <Button
+                size="sm" variant="outline"
+                className="border-yellow-500/30 text-yellow-500 hover:bg-yellow-500/10"
+                onClick={handleATSCheck}
+                disabled={checkingAts}
+                data-testid="ats-check-btn"
+              >
+                {checkingAts ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Shield className="w-3.5 h-3.5 mr-1.5" />}
+                {checkingAts ? "Checking..." : "ATS Check"}
               </Button>
             </div>
           ) : (

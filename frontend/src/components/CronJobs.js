@@ -212,12 +212,24 @@ export default function CronJobs({ user }) {
                   <Button
                     variant="outline" size="sm"
                     className="border-primary/30 text-primary hover:bg-primary/10"
-                    onClick={() => handleRun(job.id)}
+                    onClick={() => handleRun(job.id, false)}
                     disabled={runningId === job.id}
                     data-testid={`cron-run-${job.id}`}
                   >
                     {runningId === job.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                   </Button>
+                  {user?.notification_email && (
+                    <Button
+                      variant="outline" size="sm"
+                      className="border-secondary/30 text-secondary hover:bg-secondary/10"
+                      onClick={() => handleRun(job.id, true)}
+                      disabled={runningId === job.id}
+                      data-testid={`cron-run-email-${job.id}`}
+                      title="Run and send results to email"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
                   <Button
                     variant="ghost" size="sm"
                     className="text-muted-foreground hover:text-white"

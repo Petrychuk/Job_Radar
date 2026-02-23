@@ -75,14 +75,22 @@ export default function CronJobs({ user }) {
     }
   };
 
-  const handleRun = async (id) => {
+  const handleRun = async (id, withEmail = false) => {
     setRunningId(id);
     try {
-      const res = await axios.post(`${API}/cron/run/${id}`, {}, { timeout: 120000 });
+      const userEmail = user?.notification_email || user?.email || "";
+      const params = new URLSearchParams();
+      if (withEmail && userEmail) {
+        params.append("send_email", "true");
+        params.append("user_email", userEmail);
+      }
+      const url = `${API}/cron/run/${id}${params.toString() ? `?${params.toString()}` : ''}`;
+      const res = await axios.post(url, {}, { timeout: 120000 });
       setJobs(prev => prev.map(j => j.id === id ? { ...j, last_run: res.data.run_at, results_count: res.data.total_jobs_found } : j));
       setResults(prev => ({ ...prev, [id]: res.data }));
       setExpandedId(id);
-      toast.success(`Found ${res.data.total_jobs_found} jobs!`);
+      const emailMsg = res.data.email_sent ? " (Email sent!)" : "";
+      toast.success(`Found ${res.data.total_jobs_found} jobs!${emailMsg}`);
     } catch (e) {
       toast.error("Scan failed");
     } finally {
@@ -90,10 +98,11 @@ export default function CronJobs({ user }) {
     }
   };
 
-  const handleRunAll = async () => {
+  const handleRunAll = async (withEmails = false) => {
     setRunningAll(true);
     try {
-      const res = await axios.post(`${API}/cron/run-all`, {}, { timeout: 300000 });
+      const params = withEmails ? "?send_emails=true" : "";
+      const res = await axios.post(`${API}/cron/run-all${params}`, {}, { timeout: 300000 });
       toast.success(`Ran ${res.data.jobs_run} searches`);
       loadJobs();
     } catch (e) {

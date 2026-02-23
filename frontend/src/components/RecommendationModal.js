@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ExternalLink, Heart, Briefcase, FileDown, Loader2, Globe, Copy, Download } from "lucide-react";
+import { ExternalLink, Heart, Briefcase, FileDown, Loader2, Globe, Copy, Download, Shield, Target } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 

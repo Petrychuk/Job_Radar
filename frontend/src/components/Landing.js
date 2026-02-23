@@ -50,9 +50,9 @@ export default function Landing() {
               <Button
                 data-testid="launch-dashboard-btn"
                 className="bg-primary hover:bg-primary/90 text-white px-8 py-6 text-base shadow-[0_0_25px_rgba(59,130,246,0.4)] border border-primary/50 transition-all hover:shadow-[0_0_35px_rgba(59,130,246,0.6)]"
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/auth')}
               >
-                Launch Dashboard <ArrowRight className="ml-2 w-4 h-4" />
+                Get Started <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
               <Button
                 data-testid="learn-more-btn"

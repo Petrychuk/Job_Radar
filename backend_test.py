@@ -62,14 +62,51 @@ class JobRadarAPITester:
         """Run comprehensive test suite"""
         print("🚀 Starting Job Radar Backend API Testing...\n")
         
-        # Test 1: Sites Configuration
+        # Test 1: Sites Configuration (Enhanced - built_in + custom)
         print("📍 Testing Sites Configuration...")
         success, data, status_code = self.test_api_endpoint('GET', 'sites', 200)
-        if success and isinstance(data, list) and len(data) >= 18:
-            self.log_test("GET /api/sites - Sites list", True)
-            print(f"   Found {len(data)} job sites configured")
+        if success and isinstance(data, dict) and 'built_in' in data and 'custom' in data:
+            built_in_count = len(data['built_in']) if isinstance(data['built_in'], list) else 0
+            custom_count = len(data['custom']) if isinstance(data['custom'], list) else 0
+            self.log_test("GET /api/sites - Sites configuration (built_in + custom)", True)
+            print(f"   Found {built_in_count} built-in sites, {custom_count} custom sites")
         else:
-            self.log_test("GET /api/sites - Sites list", False, f"Expected array of 18+ sites, got {type(data)} with status {status_code}")
+            self.log_test("GET /api/sites - Sites configuration (built_in + custom)", False, f"Expected dict with built_in/custom arrays, got {type(data)} with status {status_code}")
+
+        # Test 1.1: Custom Sites CRUD
+        print("\n🏢 Testing Custom Sites Management...")
+        
+        # Get existing custom sites
+        success, existing_sites, status_code = self.test_api_endpoint('GET', 'custom-sites', 200)
+        if success and isinstance(existing_sites, list):
+            self.log_test("GET /api/custom-sites - Get custom sites", True)
+            print(f"   Found {len(existing_sites)} existing custom sites")
+        else:
+            self.log_test("GET /api/custom-sites - Get custom sites", False, f"Expected custom sites array, got status {status_code}")
+        
+        # Create new custom site
+        test_custom_site = {
+            "name": "Test Company Careers",
+            "url": "https://testcompany.com",
+            "careers_url": "https://testcompany.com/careers",
+            "category": "company"
+        }
+        success, created_site, status_code = self.test_api_endpoint('POST', 'custom-sites', 200, test_custom_site)
+        created_site_id = None
+        if success and created_site and 'id' in created_site:
+            created_site_id = created_site['id']
+            self.log_test("POST /api/custom-sites - Create custom site", True)
+            print(f"   Created custom site with ID: {created_site_id}")
+        else:
+            self.log_test("POST /api/custom-sites - Create custom site", False, f"Expected site creation, got status {status_code}")
+        
+        # Delete custom site (cleanup)
+        if created_site_id:
+            success, data, status_code = self.test_api_endpoint('DELETE', f'custom-sites/{created_site_id}', 200)
+            if success:
+                self.log_test("DELETE /api/custom-sites/{id} - Delete custom site", True)
+            else:
+                self.log_test("DELETE /api/custom-sites/{id} - Delete custom site", False, f"Delete failed, got status {status_code}")
 
         # Test 2: Job Search Links
         print("\n🔍 Testing Job Search...")

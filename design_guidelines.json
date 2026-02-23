@@ -1,0 +1,181 @@
+{
+  "identity": {
+    "name": "E1",
+    "persona": "The Anti-AI Designer",
+    "mission": "Create a high-tech AI Job Search Agent that feels like a powerful command center/radar, not a generic SaaS.",
+    "principles": [
+      "Fusion over Imitation: Mix Cyberpunk aesthetics with functional Data Dashboards.",
+      "Emotion First: The user should feel like a 'Hunter' using a precision tool.",
+      "Content is King: Data density is the aesthetic. No fluff.",
+      "Zoom In: Focus on the 'Signal' (Job Matches) amidst the 'Noise' (Internet).",
+      "Negative Space: Use deep black voids to make data pop."
+    ]
+  },
+  "design_theme": {
+    "name": "Electric Command Center",
+    "mode": "dark",
+    "archetype": "Electric & Neon",
+    "description": "A high-contrast, data-dense interface inspired by radar systems, terminals, and futuristic HUDs."
+  },
+  "colors": {
+    "palette": {
+      "background": {
+        "default": "#02040a",
+        "paper": "#09090b",
+        "subtle": "#18181b"
+      },
+      "foreground": {
+        "default": "#f8fafc",
+        "muted": "#94a3b8",
+        "dark": "#020617"
+      },
+      "primary": {
+        "default": "#3b82f6",
+        "glow": "0 0 20px rgba(59, 130, 246, 0.5)",
+        "foreground": "#ffffff"
+      },
+      "secondary": {
+        "default": "#22c55e",
+        "glow": "0 0 20px rgba(34, 197, 94, 0.5)",
+        "foreground": "#ffffff"
+      },
+      "accent": {
+        "default": "#8b5cf6",
+        "foreground": "#ffffff"
+      },
+      "destructive": {
+        "default": "#ef4444",
+        "foreground": "#ffffff"
+      },
+      "border": {
+        "default": "#27272a",
+        "active": "#3f3f46"
+      }
+    },
+    "gradients": {
+      "radar": "conic-gradient(from 0deg, transparent 0deg, rgba(59, 130, 246, 0.1) 200deg, rgba(59, 130, 246, 0.4) 360deg)",
+      "hero_glow": "radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, transparent 70%)"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": {
+        "family": "Chivo, sans-serif",
+        "weights": ["400", "700", "900"],
+        "purpose": "Headings, Hero Text, Key Metrics"
+      },
+      "body": {
+        "family": "Inter, sans-serif",
+        "weights": ["400", "500", "600"],
+        "purpose": "General UI text, descriptions"
+      },
+      "mono": {
+        "family": "JetBrains Mono, monospace",
+        "weights": ["400", "500"],
+        "purpose": "Data tables, logs, code snippets, numbers"
+      }
+    },
+    "rules": [
+      "Headings (Chivo): Tracking-tight, uppercase for labels.",
+      "Data (JetBrains Mono): Use for ALL tabular data and statistics.",
+      "No generic 'Inter' for headings."
+    ]
+  },
+  "layout_strategy": {
+    "spacing": {
+      "scale": ["p-1", "p-2", "p-4", "p-6", "p-8", "p-12", "p-16", "p-24"],
+      "rule": "Generous spacing in Landing (Mode A), Tight spacing in Dashboard (Mode B)."
+    },
+    "grids": {
+      "landing": {
+        "mode": "Mode A (Tetris)",
+        "columns": "grid-cols-1 md:grid-cols-12",
+        "gap": "gap-8"
+      },
+      "dashboard": {
+        "mode": "Mode B (High Density)",
+        "columns": "grid-cols-1 md:grid-cols-4 lg:grid-cols-6",
+        "gap": "gap-4",
+        "rule": "Use h-full to stretch widgets. No jagged bottoms."
+      }
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary hover:bg-primary/90 text-white shadow-[0_0_15px_rgba(59,130,246,0.5)] border border-primary/50 transition-all active:scale-95 rounded-md",
+      "secondary": "bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/50 shadow-[0_0_10px_rgba(34,197,94,0.2)] rounded-md",
+      "outline": "bg-transparent border border-border hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors rounded-md",
+      "ghost": "hover:bg-accent/10 hover:text-accent rounded-md"
+    },
+    "cards": {
+      "style": "Glassmorphism",
+      "classes": "bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl rounded-xl",
+      "hover": "hover:border-primary/30 transition-colors duration-300"
+    },
+    "inputs": {
+      "style": "Terminal",
+      "classes": "bg-black/50 border-white/10 focus:border-primary/50 focus:ring-1 focus:ring-primary/50 font-mono text-sm placeholder:text-muted-foreground/50 rounded-md"
+    },
+    "visual_enhancers": [
+      {
+        "name": "Scanline Overlay",
+        "css": "background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2)); background-size: 100% 4px; pointer-events: none; z-index: 50; position: fixed; inset: 0; opacity: 0.05;"
+      },
+      {
+        "name": "Radar Sweep",
+        "description": "A rotating gradient circle to simulate scanning."
+      }
+    ]
+  },
+  "image_assets": {
+    "hero_background": {
+      "url": "https://images.unsplash.com/photo-1719702702684-8d26ab9726fb?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Abstract Blue Burst Data Node"
+    },
+    "tech_texture": {
+      "url": "https://images.unsplash.com/photo-1719702703328-87e335030324?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Blue Abstract Lines and Dots"
+    },
+    "empty_state": {
+      "url": "https://images.unsplash.com/photo-1569447278240-259ef5c3c756?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Dark Room Light Window"
+    }
+  },
+  "page_specifics": {
+    "landing": {
+      "sections": ["Hero (Radar Concept)", "Features Grid (Tetris)", "How It Works (Step Flow)", "CTA (Upload Resume)"],
+      "vibe": "Marketing, High Impact, Storytelling"
+    },
+    "dashboard": {
+      "layout": "Sidebar + Main Content Area",
+      "widgets": ["Stats Overview (Top Row)", "Job Tracker Table (Main Area)", "Activity Feed (Right Column)"],
+      "table_columns": ["Date", "Company", "Position", "Salary", "Location", "Tech Stack", "Status", "Source", "Action"],
+      "vibe": "Functional, Dense, Editor-like"
+    }
+  },
+  "universal_guidelines": [
+    "Do NOT use 'Inter' for headings.",
+    "Do NOT use generic gradients (e.g., to top right blue to purple). Use radial glows or 'spotlights'.",
+    "Always add `data-testid` to interactive elements.",
+    "Use `sonner` for toasts.",
+    "Use `lucide-react` for icons.",
+    "Ensure 3:1 contrast ratio for large text, 4.5:1 for normal text.",
+    "Use 'Tailwind Merge' (twMerge) and 'clsx' for class manipulation.",
+    "Use 'Recharts' for data visualization with custom tooltips."
+  ],
+  "instructions_to_main_agent": {
+    "setup": [
+      "Install dependencies: `npm install lucide-react recharts framer-motion clsx tailwind-merge sonner`",
+      "Configure Tailwind colors in `tailwind.config.js` to match the Electric Palette.",
+      "Add the Google Fonts (Chivo, JetBrains Mono) to `index.html` or `index.css`."
+    ],
+    "implementation_order": [
+      "1. Setup Base Styles & Fonts",
+      "2. Build Layout Components (Sidebar, Header, GlassCard)",
+      "3. Build Dashboard Widgets (Stats, Charts)",
+      "4. Build Job Tracker Table (The Core Feature)",
+      "5. Build Landing Page Hero & Features",
+      "6. Integrate Resume Upload & Analysis View"
+    ]
+  }
+}

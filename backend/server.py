@@ -51,6 +51,80 @@ security = HTTPBearer(auto_error=False)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# ─── Auth Helper Functions ───
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+
+def create_token(user_id: str, email: str) -> str:
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "exp": datetime.now(timezone.utc) + timedelta(days=30)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if not credentials:
+        return None
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0})
+        return user
+    except JWTError:
+        return None
+
+async def require_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    user = await get_current_user(credentials)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
+
+# ─── Email Helper Functions ───
+async def send_email_notification(to_email: str, subject: str, html_content: str):
+    if not RESEND_API_KEY:
+        logger.warning("RESEND_API_KEY not configured")
+        return None
+    try:
+        params = {
+            "from": SENDER_EMAIL,
+            "to": [to_email],
+            "subject": subject,
+            "html": html_content
+        }
+        result = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Email sent to {to_email}: {result.get('id')}")
+        return result
+    except Exception as e:
+        logger.error(f"Email send failed: {e}")
+        return None
+
+def generate_cron_email_html(job_title: str, results: list, total_found: int) -> str:
+    jobs_html = ""
+    for site_result in results[:10]:
+        if site_result.get("jobs"):
+            jobs_html += f"<h3 style='color:#3b82f6;margin-bottom:8px'>{site_result['site_name']}</h3>"
+            jobs_html += "<ul style='margin:0 0 16px 0;padding-left:20px'>"
+            for job in site_result["jobs"][:5]:
+                jobs_html += f"""<li style='margin-bottom:6px'>
+                    <a href='{job.get('url','')}' style='color:#22c55e;text-decoration:none'>{job.get('title','Untitled')}</a>
+                    {f" - {job.get('company','')}" if job.get('company') else ''}
+                </li>"""
+            jobs_html += "</ul>"
+    
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#e5e5e5;padding:24px;border-radius:12px">
+        <h1 style="color:#3b82f6;margin:0 0 8px 0">JOB_RADAR</h1>
+        <h2 style="color:#22c55e;margin:0 0 20px 0">Auto Search Results: {job_title}</h2>
+        <p style="margin-bottom:20px">Found <strong style="color:#3b82f6">{total_found}</strong> new jobs matching your criteria.</p>
+        {jobs_html}
+        <hr style="border:none;border-top:1px solid #333;margin:24px 0">
+        <p style="font-size:12px;color:#666">This email was sent by Job Radar auto-search. Manage your settings in the app.</p>
+    </div>
+    """
+
 # ─── Job Site Configurations ───
 JOB_SITES = [
     {"id": "seek", "name": "Seek", "url": "https://www.seek.com.au", "search_template": "https://www.seek.com.au/{keyword}-jobs", "active": True},

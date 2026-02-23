@@ -78,7 +78,7 @@ export default function Wishlist() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Your saved job recommendations
-          {items.length > 0 && <span className="font-mono-data ml-2">({savedItems.length} saved, {appliedItems.length} applied)</span>}
+          {items.length > 0 && <span className="font-mono-data ml-2">({items.length} saved)</span>}
         </p>
       </div>
 
@@ -95,66 +95,38 @@ export default function Wishlist() {
       ) : (
         <div className="space-y-6">
           {/* Saved Items */}
-          {savedItems.length > 0 && (
-            <div>
-              <h3 className="font-bold text-sm uppercase tracking-wider text-pink-400 mb-3" style={{ fontFamily: 'Chivo, sans-serif' }}>
-                <Star className="w-4 h-4 inline mr-1" /> Saved ({savedItems.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {savedItems.map((item) => (
-                  <div key={item.id} className="glass-card rounded-xl p-5 flex flex-col group" data-testid={`wishlist-item-${item.id}`}>
-                    <div className="flex items-start justify-between mb-2">
-                      <button className="font-medium text-sm text-left hover:text-primary transition-colors" onClick={() => setSelectedRec(item)}>
-                        {item.title}
-                      </button>
-                      <Badge variant="outline" className="text-xs text-secondary border-secondary/30 font-mono-data shrink-0 ml-2">{item.match_score}%</Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground mb-1">{item.company_type}</div>
-                    <div className="text-xs text-primary/70 font-mono-data mb-1">{item.salary_range}</div>
-                    <div className="text-xs text-muted-foreground/60 mb-4 flex-1">{item.why_match}</div>
-
-                    <div className="flex gap-1.5 mt-auto pt-3 border-t border-white/5">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-primary" onClick={() => setSelectedRec(item)} data-testid={`wl-detail-${item.id}`}>
-                        <Globe className="w-3 h-3 mr-1" /> Details
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-secondary" onClick={() => handleApply(item)} data-testid={`wl-apply-${item.id}`}>
-                        <Briefcase className="w-3 h-3 mr-1" /> Apply
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-destructive ml-auto" onClick={() => handleRemove(item.id)} data-testid={`wl-remove-${item.id}`}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
+          <div>
+            <h3 className="font-bold text-sm uppercase tracking-wider text-pink-400 mb-3" style={{ fontFamily: 'Chivo, sans-serif' }}>
+              <Star className="w-4 h-4 inline mr-1" /> Saved ({items.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {items.map((item) => (
+                <div key={item.id} className="glass-card rounded-xl p-5 flex flex-col group" data-testid={`wishlist-item-${item.id}`}>
+                  <div className="flex items-start justify-between mb-2">
+                    <button className="font-medium text-sm text-left hover:text-primary transition-colors" onClick={() => setSelectedRec(item)}>
+                      {item.title}
+                    </button>
+                    <Badge variant="outline" className="text-xs text-secondary border-secondary/30 font-mono-data shrink-0 ml-2">{item.match_score}%</Badge>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  <div className="text-xs text-muted-foreground mb-1">{item.company_type}</div>
+                  <div className="text-xs text-primary/70 font-mono-data mb-1">{item.salary_range}</div>
+                  <div className="text-xs text-muted-foreground/60 mb-4 flex-1">{item.why_match}</div>
 
-          {/* Applied Items */}
-          {appliedItems.length > 0 && (
-            <div>
-              <h3 className="font-bold text-sm uppercase tracking-wider text-secondary mb-3" style={{ fontFamily: 'Chivo, sans-serif' }}>
-                <Briefcase className="w-4 h-4 inline mr-1" /> Applied ({appliedItems.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {appliedItems.map((item) => (
-                  <div key={item.id} className="glass-card rounded-xl p-5 opacity-70 border-secondary/10" data-testid={`wishlist-applied-${item.id}`}>
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="font-medium text-sm">{item.title}</div>
-                      <Badge className="bg-secondary/20 text-secondary border-secondary/30 text-xs">Applied</Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground">{item.company_type}</div>
-                    <div className="text-xs text-primary/70 font-mono-data mt-1">{item.salary_range}</div>
-                    <div className="mt-3 pt-3 border-t border-white/5">
-                      <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-destructive" onClick={() => handleRemove(item.id)}>
-                        <Trash2 className="w-3 h-3 mr-1" /> Remove
-                      </Button>
-                    </div>
+                  <div className="flex gap-1.5 mt-auto pt-3 border-t border-white/5">
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-primary" onClick={() => setSelectedRec(item)} data-testid={`wl-detail-${item.id}`}>
+                      <Globe className="w-3 h-3 mr-1" /> Details
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-secondary" onClick={() => handleApply(item)} data-testid={`wl-apply-${item.id}`}>
+                      <Briefcase className="w-3 h-3 mr-1" /> Apply
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground hover:text-destructive ml-auto" onClick={() => handleRemove(item.id)} data-testid={`wl-remove-${item.id}`}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
       )}
 

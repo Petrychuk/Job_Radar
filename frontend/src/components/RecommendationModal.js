@@ -51,6 +51,15 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
     }
   };
 
+  const handleATSCheck = async () => {
+    setCheckingAts(true);
+    try {
+      const res = await axios.post(`${API}/ats/check`, { job_title: rec.title, job_description: rec.why_match || "" }, { timeout: 60000 });
+      setAtsResult(res.data);
+    } catch (e) { toast.error("ATS check failed. Upload a resume first."); }
+    finally { setCheckingAts(false); }
+  };
+
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success("Copied to clipboard!");

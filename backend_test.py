@@ -150,10 +150,16 @@ class JobRadarAPITester:
         created_job_id = None
         if success and data and 'id' in data:
             created_job_id = data['id']
-            self.log_test("POST /api/tracker - Create job", True)
-            print(f"   Created job with ID: {created_job_id}")
+            # Verify enhanced fields are saved correctly
+            if (data.get('work_mode') == 'Hybrid' and 
+                data.get('contract_type') == 'Permanent' and 
+                data.get('visa_sponsorship') == '482 Sponsor'):
+                self.log_test("POST /api/tracker - Create job with enhanced fields", True)
+                print(f"   Created job with enhanced fields - Mode: {data.get('work_mode')}, Contract: {data.get('contract_type')}, Visa: {data.get('visa_sponsorship')}")
+            else:
+                self.log_test("POST /api/tracker - Create job with enhanced fields", False, "Enhanced fields not saved correctly")
         else:
-            self.log_test("POST /api/tracker - Create job", False, f"Expected job creation with 201, got status {status_code}")
+            self.log_test("POST /api/tracker - Create job with enhanced fields", False, f"Expected job creation with 201, got status {status_code}")
 
         # Test 5: Job Tracker - Update job (if created successfully)
         if created_job_id:

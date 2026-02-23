@@ -90,6 +90,27 @@ class TrackedJobUpdate(BaseModel):
     contact: Optional[str] = None
     notes: Optional[str] = None
 
+class WishlistItemCreate(BaseModel):
+    title: str
+    company_type: str = ""
+    match_score: int = 0
+    salary_range: str = ""
+    why_match: str = ""
+    search_keywords: List[str] = []
+
+class DocumentGenerateRequest(BaseModel):
+    job_title: str
+    company_type: str = ""
+    salary_range: str = ""
+    why_match: str = ""
+    doc_type: str = "both"  # resume, cover_letter, both
+
+class CronJobCreate(BaseModel):
+    title: str
+    keywords: List[str] = []
+    location: str = "Australia"
+    active: bool = True
+
 # ─── AI Helper Functions ───
 def parse_ai_json(response_text: str) -> dict:
     text = response_text.strip()

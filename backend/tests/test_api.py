@@ -177,8 +177,12 @@ class TestJobSearch:
         assert response.status_code == 200
         
         data = response.json()
-        assert isinstance(data, list)
-        print(f"Job Sites: {len(data)} configured sites")
+        # API returns object with built_in and custom lists
+        assert isinstance(data, dict)
+        assert "built_in" in data
+        assert "custom" in data
+        assert isinstance(data["built_in"], list)
+        print(f"Job Sites: {len(data['built_in'])} built-in + {len(data['custom'])} custom sites")
 
 
 class TestResume:

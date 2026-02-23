@@ -458,6 +458,54 @@ def extract_jobs_generic(soup: BeautifulSoup, site: dict) -> list:
 
     return jobs
 
+# ─── Auth Routes ───
+@api_router.post("/auth/register")
+async def register(data: UserRegister):
+    existing = await db.users.find_one({"email": data.email}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    user_doc = {
+        "id": str(uuid.uuid4()),
+        "email": data.email,
+        "password_hash": hash_password(data.password),
+        "name": data.name or data.email.split("@")[0],
+        "notification_email": data.email,
+        "cron_email_enabled": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.users.insert_one(user_doc)
+    user_doc.pop("_id", None)
+    user_doc.pop("password_hash", None)
+    token = create_token(user_doc["id"], user_doc["email"])
+    return {"user": user_doc, "token": token}
+
+@api_router.post("/auth/login")
+async def login(data: UserLogin):
+    user = await db.users.find_one({"email": data.email}, {"_id": 0})
+    if not user or not verify_password(data.password, user.get("password_hash", "")):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    user.pop("password_hash", None)
+    token = create_token(user["id"], user["email"])
+    return {"user": user, "token": token}
+
+@api_router.get("/auth/me")
+async def get_me(user: dict = Depends(require_user)):
+    user.pop("password_hash", None)
+    return user
+
+@api_router.put("/auth/settings")
+async def update_settings(settings: UserSettings, user: dict = Depends(require_user)):
+    update_data = {}
+    if settings.notification_email is not None:
+        update_data["notification_email"] = settings.notification_email
+    update_data["cron_email_enabled"] = settings.cron_email_enabled
+    
+    await db.users.update_one({"id": user["id"]}, {"$set": update_data})
+    updated = await db.users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
+    return updated
+
 # ─── Resume Routes ───
 @api_router.post("/resume/upload")
 async def upload_resume(file: UploadFile = File(...)):

@@ -206,6 +206,9 @@ export default function JobTracker() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{job.work_mode || '-'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{job.contract_type || '-'}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{job.visa_sponsorship || '-'}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{job.source || '-'}</TableCell>
                     <TableCell>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

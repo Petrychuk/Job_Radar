@@ -87,6 +87,43 @@ export default function AddJobDialog({ open, onOpenChange, job, onSave }) {
             </Select>
           </div>
 
+          {/* Work Mode / Contract / Visa */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">Work Mode</Label>
+              <Select value={form.work_mode || ""} onValueChange={(v) => handleChange("work_mode", v)}>
+                <SelectTrigger data-testid="work-mode-select" className="bg-black/50 border-white/10 text-sm">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent className="bg-[#18181b] border-white/10">
+                  {WORK_MODES.map(m => <SelectItem key={m || "none"} value={m || "none"}>{m || "Not Set"}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">Contract</Label>
+              <Select value={form.contract_type || ""} onValueChange={(v) => handleChange("contract_type", v)}>
+                <SelectTrigger data-testid="contract-select" className="bg-black/50 border-white/10 text-sm">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent className="bg-[#18181b] border-white/10">
+                  {CONTRACT_TYPES.map(c => <SelectItem key={c || "none"} value={c || "none"}>{c || "Not Set"}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground mb-1.5 block">Visa</Label>
+              <Select value={form.visa_sponsorship || ""} onValueChange={(v) => handleChange("visa_sponsorship", v)}>
+                <SelectTrigger data-testid="visa-select" className="bg-black/50 border-white/10 text-sm">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent className="bg-[#18181b] border-white/10">
+                  {VISA_OPTIONS.map(v => <SelectItem key={v || "none"} value={v || "none"}>{v || "Not Set"}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Fields */}
           {fields.map(f => (
             <div key={f.key}>

@@ -14,11 +14,14 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
   const [generating, setGenerating] = useState(false);
   const [generatedDocs, setGeneratedDocs] = useState(null);
   const [activeDocTab, setActiveDocTab] = useState("resume");
+  const [atsResult, setAtsResult] = useState(null);
+  const [checkingAts, setCheckingAts] = useState(false);
 
   useEffect(() => {
     if (rec) {
       loadSearchLinks();
       setGeneratedDocs(null);
+      setAtsResult(null);
     }
   }, [rec]);
 

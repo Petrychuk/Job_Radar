@@ -492,9 +492,12 @@ async def export_tracker():
         ws.cell(row=idx+1, column=7, value=job.get('location', ''))
         ws.cell(row=idx+1, column=8, value=job.get('technology', ''))
         ws.cell(row=idx+1, column=9, value=job.get('status', ''))
-        ws.cell(row=idx+1, column=10, value=job.get('link', '') or job.get('site_url', ''))
-        ws.cell(row=idx+1, column=11, value=job.get('contact', ''))
-        ws.cell(row=idx+1, column=12, value=job.get('notes', ''))
+        ws.cell(row=idx+1, column=10, value=job.get('work_mode', ''))
+        ws.cell(row=idx+1, column=11, value=job.get('contract_type', ''))
+        ws.cell(row=idx+1, column=12, value=job.get('visa_sponsorship', ''))
+        ws.cell(row=idx+1, column=13, value=job.get('link', '') or job.get('site_url', ''))
+        ws.cell(row=idx+1, column=14, value=job.get('contact', ''))
+        ws.cell(row=idx+1, column=15, value=job.get('notes', ''))
 
         sc = job.get('status', '')
         if sc in status_colors:

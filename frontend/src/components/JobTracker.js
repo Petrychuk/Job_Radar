@@ -158,6 +158,9 @@ export default function JobTracker() {
                 <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Location</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Tech</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Status</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Mode</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Contract</TableHead>
+                <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Visa</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Source</TableHead>
                 <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground w-20">Actions</TableHead>
               </TableRow>

@@ -546,7 +546,29 @@ async def get_stats():
 
 @api_router.get("/sites")
 async def get_sites():
-    return JOB_SITES
+    custom = await db.custom_sites.find({}, {"_id": 0}).to_list(100)
+    return {"built_in": JOB_SITES, "custom": custom}
+
+# ─── Custom Sites Routes ───
+@api_router.get("/custom-sites")
+async def get_custom_sites():
+    return await db.custom_sites.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+
+@api_router.post("/custom-sites")
+async def add_custom_site(site: CustomSiteCreate):
+    doc = site.model_dump()
+    doc["id"] = str(uuid.uuid4())
+    doc["created_at"] = datetime.now(timezone.utc).isoformat()
+    await db.custom_sites.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+@api_router.delete("/custom-sites/{site_id}")
+async def delete_custom_site(site_id: str):
+    result = await db.custom_sites.delete_one({"id": site_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Site not found")
+    return {"message": "Deleted"}
 
 # ─── Wishlist Routes ───
 @api_router.get("/wishlist")

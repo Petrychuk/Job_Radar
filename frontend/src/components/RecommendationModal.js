@@ -225,6 +225,9 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
             </Tabs>
           )}
         </div>
+
+        {/* ATS Report Dialog */}
+        <ATSReportDialog open={!!atsResult} onClose={() => setAtsResult(null)} report={atsResult} />
       </DialogContent>
     </Dialog>
   );

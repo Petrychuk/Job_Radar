@@ -799,7 +799,8 @@ async def apply_from_wishlist(item_id: str):
     }
     await db.tracked_jobs.insert_one(tracker_doc)
     tracker_doc.pop('_id', None)
-    await db.wishlist.update_one({"id": item_id}, {"$set": {"status": "applied"}})
+    # Delete from wishlist instead of just marking as applied
+    await db.wishlist.delete_one({"id": item_id})
     return tracker_doc
 
 @api_router.post("/recommendations/hide")

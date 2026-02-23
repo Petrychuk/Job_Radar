@@ -1,16 +1,20 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Upload, Search, Table2, BarChart3, Radar, Settings, ArrowLeft } from "lucide-react";
+import { Upload, Search, Table2, BarChart3, Radar, Settings, ArrowLeft, Heart, Clock } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import ResumeUpload from "@/components/ResumeUpload";
 import JobSearch from "@/components/JobSearch";
 import JobTracker from "@/components/JobTracker";
 import Statistics from "@/components/Statistics";
+import Wishlist from "@/components/Wishlist";
+import CronJobs from "@/components/CronJobs";
 
 const navItems = [
   { id: "resume", icon: Upload, label: "Resume" },
   { id: "search", icon: Search, label: "Job Search" },
   { id: "tracker", icon: Table2, label: "Tracker" },
+  { id: "wishlist", icon: Heart, label: "Wishlist" },
+  { id: "cron", icon: Clock, label: "Auto Search" },
   { id: "stats", icon: BarChart3, label: "Statistics" },
 ];
 

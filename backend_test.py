@@ -179,18 +179,46 @@ class JobRadarAPITester:
         else:
             self.log_test("GET /api/stats - Statistics", False, f"Expected stats object, got status {status_code}")
 
-        # Test 7: Excel Export
-        print("\n📄 Testing Excel Export...")
+        # Test 7: Excel Export (Enhanced - includes new columns)
+        print("\n📄 Testing Enhanced Excel Export...")
         url = f"{self.base_url}/api/tracker/export"
         try:
             response = requests.get(url, timeout=30)
             if response.status_code == 200 and response.headers.get('content-type', '').startswith('application/vnd.openxmlformats'):
-                self.log_test("GET /api/tracker/export - Excel export", True)
-                print(f"   Excel file size: {len(response.content)} bytes")
+                # Save temporary file to check content
+                temp_file = Path("/tmp/test_export.xlsx")
+                with open(temp_file, 'wb') as f:
+                    f.write(response.content)
+                    
+                # Basic validation - file should be readable and contain data
+                from openpyxl import load_workbook
+                try:
+                    wb = load_workbook(temp_file)
+                    ws = wb.active
+                    headers = [cell.value for cell in ws[1]]  # First row contains headers
+                    
+                    # Check if enhanced columns are present
+                    required_new_columns = ["Work Mode", "Contract", "Visa"]
+                    missing_columns = [col for col in required_new_columns if col not in headers]
+                    
+                    if not missing_columns:
+                        self.log_test("GET /api/tracker/export - Enhanced Excel with new columns", True)
+                        print(f"   Excel file exported with enhanced columns: {', '.join(required_new_columns)}")
+                    else:
+                        self.log_test("GET /api/tracker/export - Enhanced Excel with new columns", False, f"Missing columns: {', '.join(missing_columns)}")
+                        
+                    print(f"   Total columns in export: {len(headers)}")
+                    temp_file.unlink()  # cleanup
+                    
+                except ImportError:
+                    # Fallback if openpyxl not available - just check file size and type
+                    self.log_test("GET /api/tracker/export - Excel export (basic validation)", True)
+                    print(f"   Excel file size: {len(response.content)} bytes (openpyxl not available for detailed validation)")
+                    
             else:
-                self.log_test("GET /api/tracker/export - Excel export", False, f"Expected Excel file, got status {response.status_code}")
+                self.log_test("GET /api/tracker/export - Enhanced Excel export", False, f"Expected Excel file, got status {response.status_code}")
         except Exception as e:
-            self.log_test("GET /api/tracker/export - Excel export", False, str(e))
+            self.log_test("GET /api/tracker/export - Enhanced Excel export", False, str(e))
 
         # Test 8: Resume APIs (GET without upload)
         print("\n📄 Testing Resume APIs...")

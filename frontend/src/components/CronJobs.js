@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export default function CronJobs() {
+export default function CronJobs({ user }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -22,6 +22,7 @@ export default function CronJobs() {
   const [expandedId, setExpandedId] = useState(null);
   const [results, setResults] = useState({});
   const [runningAll, setRunningAll] = useState(false);
+  const [sendEmail, setSendEmail] = useState(false);
 
   useEffect(() => { loadJobs(); }, []);
 

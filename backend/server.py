@@ -866,7 +866,7 @@ async def toggle_cron_job(job_id: str):
     return {"active": new_active}
 
 @api_router.post("/cron/run/{job_id}")
-async def run_cron_job(job_id: str):
+async def run_cron_job(job_id: str, send_email: bool = False, user_email: str = ""):
     job = await db.cron_searches.find_one({"id": job_id}, {"_id": 0})
     if not job:
         raise HTTPException(status_code=404, detail="Cron job not found")
@@ -889,6 +889,15 @@ async def run_cron_job(job_id: str):
     await db.cron_results.insert_one(result_doc)
     result_doc.pop('_id', None)
     await db.cron_searches.update_one({"id": job_id}, {"$set": {"last_run": datetime.now(timezone.utc).isoformat(), "results_count": total_found}})
+    
+    # Send email notification if enabled
+    email_sent = False
+    if send_email and user_email and total_found > 0:
+        html = generate_cron_email_html(job.get("title", "Job Search"), scan_results, total_found)
+        email_result = await send_email_notification(user_email, f"Job Radar: {total_found} new jobs - {job.get('title', '')}", html)
+        email_sent = email_result is not None
+    
+    result_doc["email_sent"] = email_sent
     return result_doc
 
 @api_router.get("/cron/results/{job_id}")
@@ -897,9 +906,15 @@ async def get_cron_results(job_id: str):
     return results
 
 @api_router.post("/cron/run-all")
-async def run_all_cron_jobs():
+async def run_all_cron_jobs(send_emails: bool = False):
     active_jobs = await db.cron_searches.find({"active": True}, {"_id": 0}).to_list(100)
     total_results = []
+    
+    # Get users with cron email enabled
+    users_with_email = {}
+    async for user in db.users.find({"cron_email_enabled": True}, {"_id": 0, "id": 1, "notification_email": 1}):
+        users_with_email[user["id"]] = user.get("notification_email", "")
+    
     for job in active_jobs:
         keywords = job.get("keywords", []) or [job.get("title", "")]
         semaphore = asyncio.Semaphore(5)
@@ -918,6 +933,14 @@ async def run_all_cron_jobs():
         await db.cron_results.insert_one(result_doc)
         result_doc.pop('_id', None)
         await db.cron_searches.update_one({"id": job["id"]}, {"$set": {"last_run": datetime.now(timezone.utc).isoformat(), "results_count": total_found}})
+        
+        # Send email to all users with cron email enabled
+        if send_emails and total_found > 0:
+            for user_id, email in users_with_email.items():
+                if email:
+                    html = generate_cron_email_html(job.get("title", ""), scan_results, total_found)
+                    await send_email_notification(email, f"Job Radar: {total_found} new jobs - {job.get('title', '')}", html)
+        
         total_results.append(result_doc)
     return {"jobs_run": len(total_results), "results": total_results}
 

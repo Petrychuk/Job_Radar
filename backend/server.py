@@ -117,6 +117,12 @@ class CronJobCreate(BaseModel):
     location: str = "Australia"
     active: bool = True
 
+class CustomSiteCreate(BaseModel):
+    name: str
+    url: str
+    careers_url: str
+    category: str = "company"  # company / recruitment / other
+
 # ─── AI Helper Functions ───
 def parse_ai_json(response_text: str) -> dict:
     text = response_text.strip()

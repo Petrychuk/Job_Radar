@@ -772,6 +772,227 @@ async def run_all_cron_jobs():
         total_results.append(result_doc)
     return {"jobs_run": len(total_results), "results": total_results}
 
+# ─── CV Profiles Routes ───
+@api_router.post("/profiles/upload")
+async def create_cv_profile(file: UploadFile = File(...), name: str = "Default", profile_type: str = "General"):
+    if not file.filename.lower().endswith(('.pdf', '.docx')):
+        raise HTTPException(status_code=400, detail="Only PDF and DOCX files supported")
+    file_path = UPLOAD_DIR / f"profile_{uuid.uuid4()}_{file.filename}"
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+    analysis = await analyze_resume_with_ai(str(file_path), file.filename)
+    doc = {
+        "id": str(uuid.uuid4()), "name": name, "profile_type": profile_type,
+        "filename": file.filename, "file_path": str(file_path), "analysis": analysis,
+        "companies_sent_to": [], "usage_count": 0, "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.cv_profiles.insert_one(doc)
+    doc.pop('_id', None)
+    return doc
+
+@api_router.get("/profiles")
+async def list_cv_profiles():
+    profiles = await db.cv_profiles.find({}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return profiles
+
+@api_router.delete("/profiles/{profile_id}")
+async def delete_cv_profile(profile_id: str):
+    result = await db.cv_profiles.delete_one({"id": profile_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return {"message": "Deleted"}
+
+@api_router.post("/profiles/{profile_id}/track")
+async def track_profile_usage(profile_id: str, company: str = ""):
+    await db.cv_profiles.update_one(
+        {"id": profile_id},
+        {"$inc": {"usage_count": 1}, "$push": {"companies_sent_to": {"company": company, "date": datetime.now(timezone.utc).isoformat()}}}
+    )
+    return {"message": "Tracked"}
+
+# ─── Market Intelligence Routes ───
+@api_router.get("/market/intelligence")
+async def get_market_intelligence():
+    total = await db.tracked_jobs.count_documents({})
+    # Tech trends
+    tech_raw = {}
+    async for doc in db.tracked_jobs.find({"technology": {"$ne": ""}}, {"technology": 1, "_id": 0}):
+        for t in doc.get("technology", "").split(","):
+            t = t.strip()
+            if t and len(t) > 1:
+                tech_raw[t] = tech_raw.get(t, 0) + 1
+    tech_trends = sorted([{"name": k, "count": v} for k, v in tech_raw.items()], key=lambda x: -x["count"])[:15]
+
+    # Location analysis
+    loc_counts = {}
+    async for doc in db.tracked_jobs.aggregate([{"$match": {"location": {"$ne": ""}}}, {"$group": {"_id": "$location", "count": {"$sum": 1}}}, {"$sort": {"count": -1}}, {"$limit": 10}]):
+        loc_counts[doc["_id"]] = doc["count"]
+
+    # Company rankings
+    comp_counts = {}
+    async for doc in db.tracked_jobs.aggregate([{"$match": {"company": {"$ne": ""}}}, {"$group": {"_id": "$company", "count": {"$sum": 1}}}, {"$sort": {"count": -1}}, {"$limit": 10}]):
+        comp_counts[doc["_id"]] = doc["count"]
+
+    # Salary analysis by position type
+    salary_data = []
+    async for doc in db.tracked_jobs.find({"salary": {"$ne": ""}}, {"position": 1, "salary": 1, "_id": 0}):
+        salary_data.append({"position": doc.get("position", ""), "salary": doc.get("salary", "")})
+
+    # Source effectiveness
+    source_perf = {}
+    async for doc in db.tracked_jobs.aggregate([
+        {"$group": {"_id": {"source": "$source", "status": "$status"}, "count": {"$sum": 1}}}
+    ]):
+        src = doc["_id"].get("source", "Unknown")
+        status = doc["_id"].get("status", "Unknown")
+        if src not in source_perf:
+            source_perf[src] = {"total": 0, "interview": 0, "offer": 0, "rejected": 0}
+        source_perf[src]["total"] += doc["count"]
+        if status == "Interview":
+            source_perf[src]["interview"] += doc["count"]
+        elif status == "Offer":
+            source_perf[src]["offer"] += doc["count"]
+        elif status == "Rejected":
+            source_perf[src]["rejected"] += doc["count"]
+
+    # Performance by role type
+    role_perf = {}
+    async for doc in db.tracked_jobs.find({}, {"position": 1, "status": 1, "_id": 0}):
+        pos = doc.get("position", "Other")
+        role_key = pos.split(" ")[0] if pos else "Other"  # Group by first word
+        if role_key not in role_perf:
+            role_perf[role_key] = {"total": 0, "interview": 0, "offer": 0}
+        role_perf[role_key]["total"] += 1
+        if doc.get("status") == "Interview":
+            role_perf[role_key]["interview"] += 1
+        elif doc.get("status") == "Offer":
+            role_perf[role_key]["offer"] += 1
+
+    # Application funnel
+    funnel = {}
+    async for doc in db.tracked_jobs.aggregate([{"$group": {"_id": "$status", "count": {"$sum": 1}}}]):
+        funnel[doc["_id"] or "Unknown"] = doc["count"]
+
+    return {
+        "total_applications": total,
+        "tech_trends": tech_trends,
+        "location_analysis": [{"name": k, "count": v} for k, v in loc_counts.items()],
+        "company_rankings": [{"name": k, "count": v} for k, v in comp_counts.items()],
+        "salary_data": salary_data[:50],
+        "source_effectiveness": source_perf,
+        "role_performance": role_perf,
+        "funnel": funnel
+    }
+
+@api_router.get("/market/ai-insights")
+async def get_ai_insights():
+    resume = await db.resumes.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+    total = await db.tracked_jobs.count_documents({})
+    tech_raw = {}
+    async for doc in db.tracked_jobs.find({"technology": {"$ne": ""}}, {"technology": 1, "_id": 0}):
+        for t in doc.get("technology", "").split(","):
+            t = t.strip()
+            if t:
+                tech_raw[t] = tech_raw.get(t, 0) + 1
+    top_tech = sorted(tech_raw.items(), key=lambda x: -x[1])[:10]
+    funnel = {}
+    async for doc in db.tracked_jobs.aggregate([{"$group": {"_id": "$status", "count": {"$sum": 1}}}]):
+        funnel[doc["_id"] or "Unknown"] = doc["count"]
+    try:
+        chat = LlmChat(api_key=LLM_KEY, session_id=f"market-{uuid.uuid4()}",
+            system_message="You are a career strategist for the Australian IT market. Respond with valid JSON."
+        ).with_model("gemini", "gemini-2.5-flash")
+        skills = ", ".join(resume.get("analysis", {}).get("skills", [])) if resume else "Unknown"
+        prompt = f"""Analyze this job search data and provide strategic insights:
+Candidate skills: {skills}
+Total applications: {total}
+Application funnel: {json.dumps(funnel)}
+Top technologies in demand: {json.dumps(top_tech)}
+
+Return JSON:
+{{"market_summary": "2-3 sentence market overview",
+"strategic_advice": ["5 actionable tips"],
+"hot_skills": ["top 5 skills to highlight"],
+"weak_spots": ["2-3 areas to improve"],
+"salary_insight": "brief salary market comment",
+"best_strategy": "recommended job search strategy"}}"""
+        response = await chat.send_message(UserMessage(text=prompt))
+        return parse_ai_json(response)
+    except Exception as e:
+        logger.error(f"AI insights failed: {e}")
+        return {"market_summary": "Upload resume and track more applications for AI insights.", "strategic_advice": [], "hot_skills": [], "weak_spots": [], "salary_insight": "", "best_strategy": ""}
+
+# ─── ATS Check Routes ───
+@api_router.post("/ats/check")
+async def ats_check(req: ATSCheckRequest):
+    resume = await db.resumes.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+    if req.cv_profile_id:
+        profile = await db.cv_profiles.find_one({"id": req.cv_profile_id}, {"_id": 0})
+        if profile:
+            resume = profile
+    if not resume:
+        raise HTTPException(status_code=400, detail="Upload a resume first")
+    analysis = resume.get("analysis", {})
+    skills = ", ".join(analysis.get("skills", []))
+    try:
+        chat = LlmChat(api_key=LLM_KEY, session_id=f"ats-{uuid.uuid4()}",
+            system_message="You are an ATS optimization expert. Respond with valid JSON only."
+        ).with_model("gemini", "gemini-2.5-flash")
+        prompt = f"""ATS compatibility check:
+Resume skills: {skills}
+Resume summary: {analysis.get('summary', '')}
+Target job: {req.job_title}
+Job description: {req.job_description or 'Not provided'}
+
+Return JSON:
+{{"ats_score": 75, "keyword_match": ["matched keywords"], "missing_keywords": ["keywords to add"],
+"format_issues": ["formatting problems"], "suggestions": ["5 specific improvements"],
+"keyword_density_ok": true, "overall_verdict": "Good/Needs Work/Poor"}}"""
+        response = await chat.send_message(UserMessage(text=prompt))
+        result = parse_ai_json(response)
+        doc = {"id": str(uuid.uuid4()), "job_title": req.job_title, **result, "created_at": datetime.now(timezone.utc).isoformat()}
+        await db.ats_checks.insert_one(doc)
+        doc.pop("_id", None)
+        return doc
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ─── Skill Gap Routes ───
+@api_router.post("/skills/gap-analysis")
+async def skill_gap_analysis(req: SkillGapRequest):
+    resume = await db.resumes.find_one({}, {"_id": 0}, sort=[("created_at", -1)])
+    if not resume:
+        raise HTTPException(status_code=400, detail="Upload a resume first")
+    analysis = resume.get("analysis", {})
+    tech_raw = {}
+    async for doc in db.tracked_jobs.find({"technology": {"$ne": ""}}, {"technology": 1, "_id": 0}):
+        for t in doc.get("technology", "").split(","):
+            t = t.strip()
+            if t:
+                tech_raw[t] = tech_raw.get(t, 0) + 1
+    top_market = sorted(tech_raw.items(), key=lambda x: -x[1])[:15]
+    try:
+        chat = LlmChat(api_key=LLM_KEY, session_id=f"skillgap-{uuid.uuid4()}",
+            system_message="You are a career development advisor for Australian IT market. JSON only."
+        ).with_model("gemini", "gemini-2.5-flash")
+        prompt = f"""Skill gap analysis:
+Current skills: {', '.join(analysis.get('skills', []))}
+Target role: {req.target_role or analysis.get('preferred_titles', [''])[0]}
+Market demand (from tracked jobs): {json.dumps(top_market)}
+Seniority: {analysis.get('seniority', 'Mid')}
+
+Return JSON:
+{{"current_strengths": ["top 5 strengths"],
+"skill_gaps": [{{"skill": "name", "importance": "Critical/High/Medium", "reason": "why needed", "learning_time": "estimated weeks"}}],
+"study_plan": [{{"skill": "name", "resources": ["course/resource name"], "project_idea": "practice project"}}],
+"cv_update_suggestions": ["specific CV improvements"],
+"priority_order": ["skills to learn in order of ROI"]}}"""
+        response = await chat.send_message(UserMessage(text=prompt))
+        return parse_ai_json(response)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ─── App Setup ───
 app.include_router(api_router)
 

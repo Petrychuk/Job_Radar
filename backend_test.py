@@ -11,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 
 class JobRadarAPITester:
-    def __init__(self, base_url="https://job-radar-pro.preview.emergentagent.com"):
+    def __init__(self, base_url="https://job-hunt-ai-5.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0

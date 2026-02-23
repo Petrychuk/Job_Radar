@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Query
+from fastapi import FastAPI, APIRouter, UploadFile, File, HTTPException, Query, Depends
 from fastapi.responses import FileResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,15 +10,18 @@ import uuid
 import json
 import asyncio
 import re
+import resend
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from bs4 import BeautifulSoup
 import requests as http_requests
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 from emergentintegrations.llm.chat import LlmChat, UserMessage, FileContentWithMimeType
+from passlib.context import CryptContext
+from jose import jwt, JWTError
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -35,6 +39,14 @@ EXPORT_DIR = Path("/tmp/exports")
 EXPORT_DIR.mkdir(exist_ok=True)
 
 LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+RESEND_API_KEY = os.environ.get('RESEND_API_KEY', '')
+SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'default_secret_key')
+JWT_ALGORITHM = "HS256"
+
+resend.api_key = RESEND_API_KEY
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer(auto_error=False)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)

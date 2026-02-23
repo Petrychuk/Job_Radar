@@ -470,7 +470,7 @@ async def export_tracker():
     ws = wb.active
     ws.title = "Job Applications"
 
-    headers = ["#", "Date Posted", "Company", "Source", "Position", "Salary", "Location", "Technology", "Status", "Link", "Contact", "Notes"]
+    headers = ["#", "Date Posted", "Company", "Source", "Position", "Salary", "Location", "Technology", "Status", "Work Mode", "Contract", "Visa", "Link", "Contact", "Notes"]
     hdr_fill = PatternFill(start_color="1a3a5c", end_color="1a3a5c", fill_type="solid")
     hdr_font = Font(name="Arial", size=11, bold=True, color="FFFFFF")
 

@@ -75,6 +75,9 @@ class TrackedJobCreate(BaseModel):
     link: str = ""
     contact: str = ""
     notes: str = ""
+    work_mode: str = ""         # Remote / Hybrid / Onsite
+    contract_type: str = ""     # Permanent / Contract / Casual
+    visa_sponsorship: str = ""  # Yes / No / Unknown / 482 / PR only
 
 class TrackedJobUpdate(BaseModel):
     date_posted: Optional[str] = None
@@ -89,6 +92,9 @@ class TrackedJobUpdate(BaseModel):
     link: Optional[str] = None
     contact: Optional[str] = None
     notes: Optional[str] = None
+    work_mode: Optional[str] = None
+    contract_type: Optional[str] = None
+    visa_sponsorship: Optional[str] = None
 
 class WishlistItemCreate(BaseModel):
     title: str

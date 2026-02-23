@@ -180,6 +180,90 @@ Include exact-match AND adjacent/transition roles for Australian market."""
         logger.error(f"Recommendations failed: {e}")
         return []
 
+async def generate_documents_ai(resume_data: dict, job_title: str, company_type: str, salary_range: str, why_match: str, doc_type: str) -> dict:
+    """Generate ATS-optimized resume and/or cover letter tailored to a specific vacancy"""
+    try:
+        chat = LlmChat(
+            api_key=LLM_KEY,
+            session_id=f"docs-{uuid.uuid4()}",
+            system_message="You are an expert resume writer and career coach specializing in ATS-optimized documents for the Australian job market. You create professional, keyword-rich documents that pass ATS screening systems."
+        ).with_model("gemini", "gemini-2.5-flash")
+
+        skills = ", ".join(resume_data.get("skills", []))
+        experience_text = ""
+        for exp in resume_data.get("experience", []):
+            experience_text += f"- {exp.get('role', '')} at {exp.get('company', '')} ({exp.get('duration', '')}): {exp.get('highlights', '')}\n"
+        education = ", ".join(resume_data.get("education", []))
+        summary = resume_data.get("summary", "")
+
+        result = {}
+
+        if doc_type in ("resume", "both"):
+            resume_prompt = f"""Create an ATS-optimized resume tailored for this specific position:
+
+TARGET POSITION: {job_title}
+COMPANY TYPE: {company_type}
+SALARY RANGE: {salary_range}
+WHY IT'S A MATCH: {why_match}
+
+CANDIDATE PROFILE:
+Summary: {summary}
+Skills: {skills}
+Experience:
+{experience_text}
+Education: {education}
+
+Generate a complete, professional resume in plain text format that:
+1. Uses keywords from the target position throughout
+2. Quantifies achievements where possible
+3. Highlights relevant skills for this specific role
+4. Is ATS-friendly (no tables, graphics, or special formatting)
+5. Includes a tailored professional summary at the top
+6. Is formatted for Australian job market standards
+
+Return ONLY the resume text, no JSON or markdown."""
+
+            resume_response = await chat.send_message(UserMessage(text=resume_prompt))
+            result["resume"] = resume_response.strip()
+
+        if doc_type in ("cover_letter", "both"):
+            cl_chat = LlmChat(
+                api_key=LLM_KEY,
+                session_id=f"cl-{uuid.uuid4()}",
+                system_message="You are an expert cover letter writer for the Australian job market. You create compelling, ATS-optimized cover letters."
+            ).with_model("gemini", "gemini-2.5-flash")
+
+            cl_prompt = f"""Write an ATS-optimized cover letter for this position:
+
+TARGET POSITION: {job_title}
+COMPANY TYPE: {company_type}
+SALARY RANGE: {salary_range}
+
+CANDIDATE PROFILE:
+Summary: {summary}
+Key Skills: {skills}
+Recent Experience:
+{experience_text}
+
+Write a professional cover letter that:
+1. Opens with a strong hook showing enthusiasm for the role
+2. Highlights 2-3 most relevant achievements/skills
+3. Shows understanding of the company type and industry
+4. Uses keywords from the position throughout
+5. Ends with a clear call to action
+6. Is 3-4 paragraphs, professional tone
+7. Australian business letter format
+
+Return ONLY the cover letter text, no JSON or markdown."""
+
+            cl_response = await cl_chat.send_message(UserMessage(text=cl_prompt))
+            result["cover_letter"] = cl_response.strip()
+
+        return result
+    except Exception as e:
+        logger.error(f"Document generation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Document generation failed: {str(e)}")
+
 # ─── Scraping Functions ───
 async def scrape_single_site(site: dict, keywords: list, semaphore: asyncio.Semaphore) -> dict:
     async with semaphore:

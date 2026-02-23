@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { Clock, Plus, Trash2, Play, Loader2, Power, PowerOff, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, Plus, Trash2, Play, Loader2, Power, PowerOff, ExternalLink, ChevronDown, ChevronUp, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";

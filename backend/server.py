@@ -377,15 +377,21 @@ async def scan_jobs():
     if not keywords:
         keywords = resume.get('analysis', {}).get('preferred_titles', [])[:3]
 
+    # Combine built-in sites with custom sites
+    all_sites = [s for s in JOB_SITES if s.get('active')]
+    custom_sites = await db.custom_sites.find({}, {"_id": 0}).to_list(100)
+    for cs in custom_sites:
+        all_sites.append({
+            "id": cs["id"], "name": cs["name"], "url": cs["url"],
+            "search_template": cs.get("careers_url", cs["url"]), "active": True,
+            "custom": True, "category": cs.get("category", "company")
+        })
+
     semaphore = asyncio.Semaphore(5)
-    tasks = [scrape_single_site(site, keywords, semaphore) for site in JOB_SITES if site.get('active')]
+    tasks = [scrape_single_site(site, keywords, semaphore) for site in all_sites]
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    scan_results = []
-    for r in results:
-        if isinstance(r, Exception):
-            continue
-        scan_results.append(r)
+    scan_results = [r for r in results if not isinstance(r, Exception)]
 
     scan_doc = {
         "id": str(uuid.uuid4()),

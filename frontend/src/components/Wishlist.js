@@ -66,9 +66,6 @@ export default function Wishlist() {
     }
   };
 
-  const savedItems = items.filter(i => i.status === "saved");
-  const appliedItems = items.filter(i => i.status === "applied");
-
   return (
     <div>
       <div className="mb-8">

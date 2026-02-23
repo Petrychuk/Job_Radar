@@ -108,14 +108,16 @@ class JobRadarAPITester:
             else:
                 self.log_test("DELETE /api/custom-sites/{id} - Delete custom site", False, f"Delete failed, got status {status_code}")
 
-        # Test 2: Job Search Links
-        print("\n🔍 Testing Job Search...")
+        # Test 2: Job Search Links (Enhanced - includes custom sites)
+        print("\n🔍 Testing Job Search Links...")
         success, data, status_code = self.test_api_endpoint('GET', 'jobs/search-links?keyword=software+developer', 200)
         if success and isinstance(data, list) and len(data) > 0:
-            self.log_test("GET /api/jobs/search-links", True)
-            print(f"   Generated {len(data)} search links")
+            custom_sites_in_links = [link for link in data if link.get('custom') == True]
+            built_in_sites_in_links = [link for link in data if link.get('custom') == False]
+            self.log_test("GET /api/jobs/search-links - Enhanced search links", True)
+            print(f"   Generated {len(data)} total links ({len(built_in_sites_in_links)} built-in, {len(custom_sites_in_links)} custom)")
         else:
-            self.log_test("GET /api/jobs/search-links", False, f"Expected search links array, got status {status_code}")
+            self.log_test("GET /api/jobs/search-links - Enhanced search links", False, f"Expected search links array, got status {status_code}")
 
         # Test 3: Job Tracker - Get (empty initially)
         print("\n📊 Testing Job Tracker...")

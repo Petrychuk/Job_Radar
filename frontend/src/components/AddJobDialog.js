@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const STATUSES = ["New", "Applied", "Interview", "Offer", "Rejected", "Withdrawn", "No Response"];
+const WORK_MODES = ["", "Remote", "Hybrid", "Onsite"];
+const CONTRACT_TYPES = ["", "Permanent", "Contract", "Casual", "Internship"];
+const VISA_OPTIONS = ["", "Yes", "No", "Unknown", "482 Sponsor", "PR Only", "Citizen Only"];
 
 const fields = [
   { key: "position", label: "Position", type: "text", required: true },

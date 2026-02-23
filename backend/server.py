@@ -74,6 +74,21 @@ JOB_SITES = [
 ]
 
 # ─── Pydantic Models ───
+
+# Auth Models
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str
+    name: str = ""
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class UserSettings(BaseModel):
+    notification_email: Optional[str] = None
+    cron_email_enabled: bool = False
+
 class TrackedJobCreate(BaseModel):
     date_posted: str = ""
     company: str = ""

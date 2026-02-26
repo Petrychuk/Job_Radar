@@ -125,6 +125,49 @@ export default function JobSearch() {
     }
   };
 
+  const addToWishlist = async (job) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API}/wishlist`, {
+        title: job.title,
+        company_type: job.company || "",
+        match_score: 0,
+        salary_range: "",
+        why_match: `From ${job.source}`,
+        search_keywords: []
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(`Added "${job.title}" to wishlist`);
+    } catch (e) {
+      toast.error("Failed to add to wishlist");
+    }
+  };
+
+  const hideJob = async (job) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API}/jobs/hide`, {
+        title: job.title,
+        source: job.source,
+        url: job.url
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Remove from local state
+      setScanData(prev => ({
+        ...prev,
+        results: prev.results.map(site => ({
+          ...site,
+          jobs: site.jobs.filter(j => j.title !== job.title || j.url !== job.url)
+        }))
+      }));
+      toast.success("Job hidden");
+    } catch (e) {
+      toast.error("Failed to hide job");
+    }
+  };
+
   const handleAddCustomSite = async () => {
     if (!newSite.name.trim() || !newSite.url.trim()) { toast.error("Name and URL required"); return; }
     try {

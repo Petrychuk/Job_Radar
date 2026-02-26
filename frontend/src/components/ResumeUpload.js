@@ -225,12 +225,40 @@ export default function ResumeUpload() {
   };
 
   const analysis = selectedResume?.analysis;
-  const recommendations = (selectedResume?.recommendations || []).filter(r => !hiddenTitles.includes(r.title));
   
-  // Extract all jobs from job results
-  const allJobs = jobResults?.results?.flatMap(site => 
-    (site.jobs || []).map(job => ({ ...job, source: site.site_name }))
-  ) || [];
+  // Safely parse recommendations
+  let recommendations = [];
+  try {
+    const recs = selectedResume?.recommendations;
+    if (Array.isArray(recs)) {
+      recommendations = recs;
+    } else if (typeof recs === 'string') {
+      recommendations = JSON.parse(recs);
+    } else if (recs && typeof recs === 'object') {
+      recommendations = [recs];
+    }
+    recommendations = recommendations.filter(r => !hiddenTitles.includes(r.title));
+  } catch (e) {
+    console.error('Error parsing recommendations:', e);
+    recommendations = [];
+  }
+  
+  // Safely extract all jobs from job results
+  let allJobs = [];
+  try {
+    if (jobResults?.results) {
+      const results = Array.isArray(jobResults.results) ? jobResults.results : 
+                      typeof jobResults.results === 'string' ? JSON.parse(jobResults.results) : [];
+      allJobs = results.flatMap(site => {
+        const jobs = Array.isArray(site.jobs) ? site.jobs : 
+                     typeof site.jobs === 'string' ? JSON.parse(site.jobs) : [];
+        return jobs.map(job => ({ ...job, source: site.site_name || site.name }));
+      });
+    }
+  } catch (e) {
+    console.error('Error parsing job results:', e);
+    allJobs = [];
+  }
 
   return (
     <div>

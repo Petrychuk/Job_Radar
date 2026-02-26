@@ -801,6 +801,31 @@ async def get_wishlist(user: dict = Depends(require_user)):
         )
         return [{**dict(i), 'id': str(i['id']), 'user_id': str(i['user_id'])} for i in items]
 
+@api_router.post("/wishlist/generate-docs")
+async def generate_documents_for_job(req: DocumentGenerateRequest, user: dict = Depends(require_user)):
+    """Generate resume and/or cover letter for a specific job"""
+    async with db_pool.acquire() as conn:
+        # Get user's latest resume for context
+        resume = await conn.fetchrow(
+            "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+            to_uuid(user['id'])
+        )
+        if not resume:
+            raise HTTPException(status_code=400, detail="No resume found. Please upload a resume first.")
+        
+        resume_data = resume['analysis'] if isinstance(resume['analysis'], dict) else json.loads(resume['analysis'])
+        
+        docs = await generate_documents_ai(
+            resume_data, 
+            req.job_title, 
+            req.company_type, 
+            req.salary_range, 
+            req.why_match, 
+            req.doc_type
+        )
+        
+        return docs
+
 # ─── Tracker Routes ───
 @api_router.get("/tracker")
 async def get_tracked_jobs(status: Optional[str] = None, user: dict = Depends(require_user)):

@@ -58,14 +58,20 @@ export default function JobSearch() {
 
   const loadLastScan = async () => {
     try {
-      const res = await axios.get(`${API}/jobs`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/jobs`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (res.data) setScanData(res.data);
     } catch (e) { /* ignore */ }
   };
 
   const loadCustomSites = async () => {
     try {
-      const res = await axios.get(`${API}/custom-sites`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/custom-sites`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setCustomSites(res.data || []);
     } catch (e) { /* ignore */ }
   };
@@ -73,7 +79,11 @@ export default function JobSearch() {
   const handleScan = async () => {
     setScanning(true);
     try {
-      const res = await axios.post(`${API}/jobs/scan`, {}, { timeout: 120000 });
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API}/jobs/scan`, {}, { 
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 120000 
+      });
       setScanData(res.data);
       toast.success(`Scan complete! Found ${res.data.total_jobs_found} jobs across ${res.data.sites_scanned} sites`);
     } catch (err) {
@@ -86,7 +96,11 @@ export default function JobSearch() {
   const loadSearchLinks = async () => {
     setLoadingLinks(true);
     try {
-      const res = await axios.get(`${API}/jobs/search-links`, { params: { keyword } });
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/jobs/search-links`, { 
+        params: { keyword },
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setSearchLinks(res.data || []);
     } catch (e) {
       toast.error("Failed to generate search links");

@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { Upload, FileText, Brain, Briefcase, Star, Loader2, X, CheckCircle, Heart, Trash2, ExternalLink, FileDown, Search, Plus, Folder } from "lucide-react";
+import { Upload, FileText, Brain, Briefcase, Star, Loader2, X, CheckCircle, Heart, Trash2, ExternalLink, FileDown, Search, Plus, Folder, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import RecommendationModal from "@/components/RecommendationModal";
+import JobDetailModal from "@/components/JobDetailModal";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -19,6 +19,7 @@ export default function ResumeUpload() {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [hiddenTitles, setHiddenTitles] = useState([]);
   const [selectedRec, setSelectedRec] = useState(null);
+  const [selectedJob, setSelectedJob] = useState(null);
   const [savingId, setSavingId] = useState(null);
   const [jobResults, setJobResults] = useState(null);
 

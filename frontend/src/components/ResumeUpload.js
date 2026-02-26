@@ -70,14 +70,17 @@ export default function ResumeUpload() {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("profile_name", profileName.trim());
-      const res = await axios.post(`${API}/resume/upload`, formData, { 
-        headers: { 
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`
-        }, 
-        timeout: 120000 
-      });
+      const res = await axios.post(
+        `${API}/resume/upload?profile_name=${encodeURIComponent(profileName.trim())}`, 
+        formData, 
+        { 
+          headers: { 
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`
+          }, 
+          timeout: 120000 
+        }
+      );
       toast.success("Resume analyzed successfully!");
       setFile(null);
       setProfileName("");

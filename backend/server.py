@@ -885,6 +885,39 @@ async def hide_recommendation(title: str, user: dict = Depends(require_user)):
         )
         return {"message": "Hidden"}
 
+# ─── Custom Sites Routes ───
+@api_router.get("/custom-sites")
+async def get_custom_sites(user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        sites = await conn.fetch(
+            "SELECT * FROM custom_sites WHERE user_id = $1 ORDER BY created_at DESC",
+            to_uuid(user['id'])
+        )
+        return [{**dict(s), 'id': str(s['id']), 'user_id': str(s['user_id'])} for s in sites]
+
+@api_router.post("/custom-sites")
+async def add_custom_site(site: CustomSiteCreate, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        site_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO custom_sites (id, user_id, name, url, careers_url, category, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+            site_id, to_uuid(user['id']), site.name, site.url, site.careers_url, site.category, datetime.now(timezone.utc)
+        )
+        result = await conn.fetchrow("SELECT * FROM custom_sites WHERE id = $1", site_id)
+        return {**dict(result), 'id': str(result['id']), 'user_id': str(result['user_id'])}
+
+@api_router.delete("/custom-sites/{site_id}")
+async def delete_custom_site(site_id: str, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM custom_sites WHERE id = $1 AND user_id = $2",
+            uuid.UUID(site_id), to_uuid(user['id'])
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Site not found")
+        return {"message": "Deleted"}
+
 # Continue with more routes...
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware, allow_credentials=True, 

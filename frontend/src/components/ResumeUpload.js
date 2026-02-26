@@ -242,27 +242,6 @@ export default function ResumeUpload() {
       {(showUploadForm || allResumes.length === 0) && (
         <div className="glass-card rounded-xl p-6 mb-6">
           <h3 className="font-bold text-sm uppercase tracking-wider text-primary mb-4">Upload New Resume</h3>
-          
-          <div className="mb-4">
-            <label className="text-sm text-muted-foreground mb-2 block">Profile Name *</label>
-            <input
-              type="text"
-              placeholder="e.g. Developer, Tester, Full-Stack"
-              value={profileName}
-              onChange={(e) => setProfileName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/10 text-sm focus:outline-none focus:border-primary"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="text-sm text-muted-foreground mb-2 block">Profile Name *</label>
-            <input
-              type="text"
-              placeholder="e.g. Developer, Tester, Full-Stack"
-              value={profileName}
-              onChange={(e) => setProfileName(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/10 text-sm focus:outline-none focus:border-primary"
-            />
-          </div>
 
           {/* Upload Zone */}
           <div

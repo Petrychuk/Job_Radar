@@ -6,6 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import ResumeUpload from "@/components/ResumeUpload";
 import JobSearch from "@/components/JobSearch";
 import FreelanceSearch from "@/components/FreelanceSearch";
+import SearchPage from "@/components/SearchPage";
 import JobTracker from "@/components/JobTracker";
 import Statistics from "@/components/Statistics";
 import Wishlist from "@/components/Wishlist";
@@ -46,7 +47,7 @@ export default function Dashboard({ user, onLogout }) {
     switch (activeSection) {
       case "resume": return <ResumeUpload />;
       case "profiles": return <CVProfiles />;
-      case "search": return <FreelanceSearch />;
+      case "search": return <SearchPage />;
       case "tracker": return <JobTracker />;
       case "wishlist": return <Wishlist />;
       case "cron": return <CronJobs user={user} />;

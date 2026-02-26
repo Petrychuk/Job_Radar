@@ -778,6 +778,29 @@ async def get_search_links(keyword: str = "software developer", user: dict = Dep
             links.append({"site_id": str(cs['id']), "site_name": cs['name'], "site_url": cs['url'], "search_url": cs['careers_url'], "custom": True})
     return links
 
+@api_router.post("/jobs/hide")
+async def hide_job(data: dict, user: dict = Depends(require_user)):
+    """Hide a job so it doesn't appear in results"""
+    async with db_pool.acquire() as conn:
+        job_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO hidden_jobs (id, user_id, title, source, url, hidden_at)
+               VALUES ($1, $2, $3, $4, $5, $6)""",
+            job_id, to_uuid(user['id']), data.get('title', ''), 
+            data.get('source', ''), data.get('url', ''), datetime.now(timezone.utc)
+        )
+        return {"message": "Job hidden"}
+
+@api_router.get("/jobs/hidden")
+async def get_hidden_jobs(user: dict = Depends(require_user)):
+    """Get list of hidden jobs"""
+    async with db_pool.acquire() as conn:
+        hidden = await conn.fetch(
+            "SELECT title, url FROM hidden_jobs WHERE user_id = $1",
+            to_uuid(user['id'])
+        )
+        return [{"title": h['title'], "url": h['url']} for h in hidden]
+
 # ─── Wishlist Routes ───
 @api_router.post("/wishlist")
 async def add_to_wishlist(item: WishlistItemCreate, user: dict = Depends(require_user)):

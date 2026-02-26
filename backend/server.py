@@ -80,6 +80,12 @@ async def get_db():
     async with db_pool.acquire() as conn:
         yield conn
 
+def to_uuid(value):
+    """Convert string or UUID to UUID object safely"""
+    if isinstance(value, uuid.UUID):
+        return value
+    return uuid.UUID(value)
+
 # ─── Auth Helper Functions ───
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)

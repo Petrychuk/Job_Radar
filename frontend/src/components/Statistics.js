@@ -3,7 +3,7 @@ import axios from "axios";
 import { BarChart3, TrendingUp, Target, XCircle, Briefcase } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
 const STATUS_COLORS = {
   'New': '#94a3b8', 'Applied': '#8b5cf6', 'Interview': '#3b82f6',

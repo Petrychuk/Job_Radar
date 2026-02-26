@@ -541,4 +541,126 @@ async def update_settings(settings: UserSettings, user: dict = Depends(require_u
         updated_dict['id'] = str(updated_dict['id'])
         return updated_dict
 
-# Continue in next file part...
+# ─── Resume Routes ───
+@api_router.post("/resume/upload")
+async def upload_resume(file: UploadFile = File(...), user: dict = Depends(require_user)):
+    if not file.filename.lower().endswith(('.pdf', '.docx')):
+        raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
+
+    file_path = UPLOAD_DIR / f"{uuid.uuid4()}_{file.filename}"
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    analysis = await analyze_resume_with_ai(str(file_path), file.filename)
+    recommendations = await generate_job_recommendations(analysis)
+
+    async with db_pool.acquire() as conn:
+        resume_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO resumes (id, user_id, filename, file_path, analysis, recommendations, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+            resume_id, uuid.UUID(user['id']), file.filename, str(file_path),
+            json.dumps(analysis), json.dumps(recommendations), datetime.now(timezone.utc)
+        )
+        
+        resume = await conn.fetchrow("SELECT * FROM resumes WHERE id = $1", resume_id)
+        result = dict(resume)
+        result['id'] = str(result['id'])
+        result['user_id'] = str(result['user_id'])
+        return result
+
+@api_router.get("/resume")
+async def get_resume(user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        resume = await conn.fetchrow(
+            "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+            uuid.UUID(user['id'])
+        )
+        if not resume:
+            return None
+        result = dict(resume)
+        result['id'] = str(result['id'])
+        result['user_id'] = str(result['user_id'])
+        return result
+
+# ─── Job Scanning Routes ───
+@api_router.post("/jobs/scan")
+async def scan_jobs(user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        resume = await conn.fetchrow(
+            "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+            uuid.UUID(user['id'])
+        )
+        if not resume:
+            raise HTTPException(status_code=400, detail="Upload a resume first")
+
+        analysis = resume['analysis'] if isinstance(resume['analysis'], dict) else json.loads(resume['analysis'])
+        keywords = analysis.get('keywords', [])[:5]
+        if not keywords:
+            keywords = analysis.get('preferred_titles', [])[:3]
+
+        all_sites = [s for s in JOB_SITES if s.get('active')]
+        custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", uuid.UUID(user['id']))
+        for cs in custom_sites:
+            all_sites.append({
+                "id": str(cs['id']), "name": cs['name'], "url": cs['url'],
+                "search_template": cs['careers_url'], "active": True, "custom": True
+            })
+
+        semaphore = asyncio.Semaphore(5)
+        tasks = [scrape_single_site(site, keywords, semaphore) for site in all_sites]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        scan_results = [r for r in results if not isinstance(r, Exception)]
+
+        scan_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO scans (id, user_id, keywords, results, total_jobs_found, sites_scanned, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+            scan_id, uuid.UUID(user['id']), keywords, json.dumps(scan_results),
+            sum(len(r.get('jobs', [])) for r in scan_results), len(scan_results), datetime.now(timezone.utc)
+        )
+        
+        scan = await conn.fetchrow("SELECT * FROM scans WHERE id = $1", scan_id)
+        result = dict(scan)
+        result['id'] = str(result['id'])
+        result['user_id'] = str(result['user_id'])
+        result['results'] = json.loads(result['results']) if isinstance(result['results'], str) else result['results']
+        return result
+
+@api_router.get("/jobs")
+async def get_jobs(user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        scan = await conn.fetchrow(
+            "SELECT * FROM scans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+            uuid.UUID(user['id'])
+        )
+        if not scan:
+            return None
+        result = dict(scan)
+        result['id'] = str(result['id'])
+        result['user_id'] = str(result['user_id'])
+        result['results'] = json.loads(result['results']) if isinstance(result['results'], str) else result['results']
+        return result
+
+@api_router.get("/jobs/search-links")
+async def get_search_links(keyword: str = "software developer", user: dict = Depends(require_user)):
+    links = []
+    for site in JOB_SITES:
+        if site.get('active'):
+            kw = keyword.replace(' ', '+')
+            search_url = site['search_template'].replace('{keyword}', kw)
+            links.append({"site_id": site['id'], "site_name": site['name'], "site_url": site['url'], "search_url": search_url, "custom": False})
+    
+    async with db_pool.acquire() as conn:
+        custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", uuid.UUID(user['id']))
+        for cs in custom_sites:
+            links.append({"site_id": str(cs['id']), "site_name": cs['name'], "site_url": cs['url'], "search_url": cs['careers_url'], "custom": True})
+    return links
+
+# Continue with more routes...
+app.include_router(api_router)
+app.add_middleware(CORSMiddleware, allow_credentials=True, 
+                  allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+                  allow_methods=["*"], allow_headers=["*"])
+

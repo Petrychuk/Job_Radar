@@ -737,6 +737,88 @@ async def get_search_links(keyword: str = "software developer", user: dict = Dep
             links.append({"site_id": str(cs['id']), "site_name": cs['name'], "site_url": cs['url'], "search_url": cs['careers_url'], "custom": True})
     return links
 
+# ─── Wishlist Routes ───
+@api_router.post("/wishlist")
+async def add_to_wishlist(item: WishlistItemCreate, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        item_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO wishlist (id, user_id, title, company_type, match_score, salary_range, why_match, search_keywords, status, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
+            item_id, uuid.UUID(user['id']), item.title, item.company_type, item.match_score,
+            item.salary_range, item.why_match, item.search_keywords, "saved", datetime.now(timezone.utc)
+        )
+        result = await conn.fetchrow("SELECT * FROM wishlist WHERE id = $1", item_id)
+        return {**dict(result), 'id': str(result['id']), 'user_id': str(result['user_id'])}
+
+@api_router.get("/wishlist")
+async def get_wishlist(user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        items = await conn.fetch(
+            "SELECT * FROM wishlist WHERE user_id = $1 ORDER BY created_at DESC",
+            uuid.UUID(user['id'])
+        )
+        return [{**dict(i), 'id': str(i['id']), 'user_id': str(i['user_id'])} for i in items]
+
+# ─── Tracker Routes ───
+@api_router.get("/tracker")
+async def get_tracked_jobs(status: Optional[str] = None, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        if status and status != "All":
+            jobs = await conn.fetch(
+                "SELECT * FROM tracked_jobs WHERE user_id = $1 AND status = $2 ORDER BY created_at DESC",
+                uuid.UUID(user['id']), status
+            )
+        else:
+            jobs = await conn.fetch(
+                "SELECT * FROM tracked_jobs WHERE user_id = $1 ORDER BY created_at DESC",
+                uuid.UUID(user['id'])
+            )
+        return [{**dict(j), 'id': str(j['id']), 'user_id': str(j['user_id'])} for j in jobs]
+
+@api_router.post("/tracker")
+async def add_tracked_job(job: TrackedJobCreate, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        job_id = uuid.uuid4()
+        data = job.model_dump()
+        await conn.execute(
+            """INSERT INTO tracked_jobs (
+                id, user_id, date_posted, company, site_url, position, salary, location,
+                technology, status, source, link, contact, notes, work_mode, contract_type,
+                visa_sponsorship, date_applied, response_date, interview_stages, rejection_reason,
+                recruiter_name, follow_up_date, linkedin_connection, cv_profile_used, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)""",
+            job_id, uuid.UUID(user['id']), data['date_posted'], data['company'], data['site_url'],
+            data['position'], data['salary'], data['location'], data['technology'], data['status'],
+            data['source'], data['link'], data['contact'], data['notes'], data['work_mode'],
+            data['contract_type'], data['visa_sponsorship'], data['date_applied'], data['response_date'],
+            data['interview_stages'], data['rejection_reason'], data['recruiter_name'], data['follow_up_date'],
+            data['linkedin_connection'], data['cv_profile_used'], datetime.now(timezone.utc), datetime.now(timezone.utc)
+        )
+        result = await conn.fetchrow("SELECT * FROM tracked_jobs WHERE id = $1", job_id)
+        return {**dict(result), 'id': str(result['id']), 'user_id': str(result['user_id'])}
+
+# ─── Recommendations Routes ───
+@api_router.get("/recommendations/hidden")
+async def get_hidden_recommendations(user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        hidden = await conn.fetch(
+            "SELECT title FROM hidden_recommendations WHERE user_id = $1",
+            uuid.UUID(user['id'])
+        )
+        return [h['title'] for h in hidden]
+
+@api_router.post("/recommendations/hide")
+async def hide_recommendation(title: str, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        rec_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO hidden_recommendations (id, user_id, title, hidden_at)
+               VALUES ($1, $2, $3, $4)""",
+            rec_id, uuid.UUID(user['id']), title, datetime.now(timezone.utc)
+        )
+        return {"message": "Hidden"}
+
 # Continue with more routes...
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware, allow_credentials=True, 

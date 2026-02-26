@@ -17,7 +17,10 @@ export default function Wishlist() {
 
   const loadWishlist = async () => {
     try {
-      const res = await axios.get(`${API}/wishlist`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/wishlist`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setItems(res.data || []);
     } catch (e) {
       toast.error("Failed to load wishlist");
@@ -28,7 +31,10 @@ export default function Wishlist() {
 
   const handleRemove = async (id) => {
     try {
-      await axios.delete(`${API}/wishlist/${id}`);
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/wishlist/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setItems(prev => prev.filter(i => i.id !== id));
       toast.success("Removed from wishlist");
     } catch (e) {
@@ -38,12 +44,24 @@ export default function Wishlist() {
 
   const handleApply = async (item) => {
     try {
-      await axios.post(`${API}/wishlist/${item.id}/apply`);
-      // Remove from local state since backend deletes it
-      setItems(prev => prev.filter(i => i.id !== item.id));
+      const token = localStorage.getItem("token");
+      // Add to tracker
+      await axios.post(`${API}/tracker`, {
+        position: item.title,
+        company: item.company_type || "",
+        salary: item.salary_range || "",
+        location: "Australia",
+        technology: (item.search_keywords || []).join(", "),
+        status: "New",
+        source: "Wishlist",
+        date_posted: new Date().toISOString().split('T')[0],
+        notes: `Match: ${item.match_score}% - ${item.why_match}`
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       toast.success(`"${item.title}" added to tracker!`);
     } catch (e) {
-      toast.error("Failed to apply");
+      toast.error("Failed to add to tracker");
     }
   };
 

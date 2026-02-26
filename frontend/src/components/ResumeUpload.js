@@ -155,8 +155,8 @@ export default function ResumeUpload() {
     }
   };
 
-  const analysis = resumeData?.analysis;
-  const recommendations = (resumeData?.recommendations || []).filter(r => !hiddenTitles.includes(r.title));
+  const analysis = selectedResume?.analysis;
+  const recommendations = (selectedResume?.recommendations || []).filter(r => !hiddenTitles.includes(r.title));
 
   return (
     <div>
@@ -167,7 +167,63 @@ export default function ResumeUpload() {
         <p className="text-sm text-muted-foreground mt-1">Upload your CV and let AI extract your professional profile</p>
       </div>
 
-      {/* Upload Zone */}
+      {/* Resume Tabs/Selector */}
+      {allResumes.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-3 mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Your Resumes</h3>
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => setShowUploadForm(!showUploadForm)}
+            >
+              <Plus className="w-3 h-3 mr-1" /> Add New
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {allResumes.map((resume) => (
+              <div key={resume.id} className="relative group">
+                <button
+                  onClick={() => setSelectedResume(resume)}
+                  className={`glass-card px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                    selectedResume?.id === resume.id 
+                      ? 'border-primary bg-primary/10 text-primary' 
+                      : 'border-white/10 hover:border-primary/50'
+                  }`}
+                >
+                  <Folder className="w-4 h-4" />
+                  {resume.profile_name || resume.filename}
+                </button>
+                {allResumes.length > 1 && (
+                  <button
+                    onClick={() => handleDeleteResume(resume.id)}
+                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive/90 hover:bg-destructive text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Upload Form */}
+      {(showUploadForm || allResumes.length === 0) && (
+        <div className="glass-card rounded-xl p-6 mb-6">
+          <h3 className="font-bold text-sm uppercase tracking-wider text-primary mb-4">Upload New Resume</h3>
+          
+          <div className="mb-4">
+            <label className="text-sm text-muted-foreground mb-2 block">Profile Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Developer, Tester, Full-Stack"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/10 text-sm focus:outline-none focus:border-primary"
+            />
+          </div>
       <div
         data-testid="resume-drop-zone"
         className={`drop-zone rounded-xl p-12 text-center cursor-pointer transition-all ${dragging ? 'active' : ''} ${file ? 'border-secondary/50' : ''}`}

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RecommendationModal from "@/components/RecommendationModal";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function ResumeUpload() {
   const [file, setFile] = useState(null);

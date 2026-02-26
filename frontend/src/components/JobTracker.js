@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import AddJobDialog from "@/components/AddJobDialog";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 const STATUSES = ["All", "New", "Applied", "Interview", "Offer", "Rejected", "Withdrawn", "No Response"];
 
 export default function JobTracker() {

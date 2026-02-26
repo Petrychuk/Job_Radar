@@ -899,6 +899,41 @@ async def add_tracked_job(job: TrackedJobCreate, user: dict = Depends(require_us
         result = await conn.fetchrow("SELECT * FROM tracked_jobs WHERE id = $1", job_id)
         return {**dict(result), 'id': str(result['id']), 'user_id': str(result['user_id'])}
 
+@api_router.put("/tracker/{job_id}")
+async def update_tracked_job(job_id: str, updates: TrackedJobUpdate, user: dict = Depends(require_user)):
+    """Update tracked job"""
+    async with db_pool.acquire() as conn:
+        update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No updates provided")
+        
+        set_clauses = [f"{k} = ${i+2}" for i, k in enumerate(update_data.keys())]
+        set_clauses.append(f"updated_at = ${len(update_data)+2}")
+        params = [uuid.UUID(job_id)] + list(update_data.values()) + [datetime.now(timezone.utc), to_uuid(user['id'])]
+        
+        result = await conn.execute(
+            f"UPDATE tracked_jobs SET {', '.join(set_clauses)} WHERE id = $1 AND user_id = ${len(update_data)+3}",
+            *params
+        )
+        
+        if result == "UPDATE 0":
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        updated = await conn.fetchrow("SELECT * FROM tracked_jobs WHERE id = $1", uuid.UUID(job_id))
+        return {**dict(updated), 'id': str(updated['id']), 'user_id': str(updated['user_id'])}
+
+@api_router.delete("/tracker/{job_id}")
+async def delete_tracked_job(job_id: str, user: dict = Depends(require_user)):
+    """Delete tracked job"""
+    async with db_pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM tracked_jobs WHERE id = $1 AND user_id = $2",
+            uuid.UUID(job_id), to_uuid(user['id'])
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Job not found")
+        return {"message": "Deleted"}
+
 # ─── Recommendations Routes ───
 @api_router.get("/recommendations/hidden")
 async def get_hidden_recommendations(user: dict = Depends(require_user)):

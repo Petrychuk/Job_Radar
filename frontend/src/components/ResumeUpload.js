@@ -185,8 +185,52 @@ export default function ResumeUpload() {
     }
   };
 
+  const handleGenerateDocs = async (job, docType) => {
+    try {
+      const token = localStorage.getItem("token");
+      toast.info("Generating documents... This may take a minute.");
+      const res = await axios.post(`${API}/wishlist/generate-docs`, {
+        job_title: job.title,
+        company_type: job.company || job.company_type || "",
+        salary_range: job.salary_range || job.salary || "",
+        why_match: job.why_match || `Match for ${job.title}`,
+        doc_type: docType
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 120000
+      });
+      
+      if (res.data.resume) {
+        const blob = new Blob([res.data.resume], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${job.title.replace(/[^a-z0-9]/gi, '_')}_Resume.txt`;
+        a.click();
+      }
+      
+      if (res.data.cover_letter) {
+        const blob = new Blob([res.data.cover_letter], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${job.title.replace(/[^a-z0-9]/gi, '_')}_CoverLetter.txt`;
+        a.click();
+      }
+      
+      toast.success("Documents generated and downloaded!");
+    } catch (e) {
+      toast.error("Failed to generate documents: " + (e.response?.data?.detail || e.message));
+    }
+  };
+
   const analysis = selectedResume?.analysis;
   const recommendations = (selectedResume?.recommendations || []).filter(r => !hiddenTitles.includes(r.title));
+  
+  // Extract all jobs from job results
+  const allJobs = jobResults?.results?.flatMap(site => 
+    (site.jobs || []).map(job => ({ ...job, source: site.site_name }))
+  ) || [];
 
   return (
     <div>

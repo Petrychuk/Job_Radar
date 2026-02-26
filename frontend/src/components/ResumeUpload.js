@@ -224,42 +224,71 @@ export default function ResumeUpload() {
               className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/10 text-sm focus:outline-none focus:border-primary"
             />
           </div>
-      <div
-        data-testid="resume-drop-zone"
-        className={`drop-zone rounded-xl p-12 text-center cursor-pointer transition-all ${dragging ? 'active' : ''} ${file ? 'border-secondary/50' : ''}`}
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => !file && document.getElementById('file-input').click()}
-      >
-        <input id="file-input" data-testid="file-input" type="file" className="hidden" accept=".pdf,.docx" onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])} />
-        {file ? (
-          <div className="flex items-center justify-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
-              <FileText className="w-6 h-6 text-secondary" />
-            </div>
-            <div className="text-left">
-              <div className="font-medium">{file.name}</div>
-              <div className="text-sm text-muted-foreground font-mono-data">{(file.size / 1024).toFixed(1)} KB</div>
-            </div>
-            <Button variant="ghost" size="icon" data-testid="remove-file-btn" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
-              <X className="w-4 h-4" />
-            </Button>
+          <div className="mb-4">
+            <label className="text-sm text-muted-foreground mb-2 block">Profile Name *</label>
+            <input
+              type="text"
+              placeholder="e.g. Developer, Tester, Full-Stack"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg bg-black/50 border border-white/10 text-sm focus:outline-none focus:border-primary"
+            />
           </div>
-        ) : (
-          <>
-            <Upload className="w-10 h-10 text-primary/50 mx-auto mb-4" />
-            <p className="text-muted-foreground mb-1">Drag & drop your resume here</p>
-            <p className="text-xs text-muted-foreground/60">PDF or DOCX, max 10MB</p>
-          </>
-        )}
-      </div>
 
-      {file && !resumeData && (
-        <div className="mt-4 flex justify-center">
-          <Button data-testid="upload-resume-btn" className="bg-primary hover:bg-primary/90 text-white px-8 shadow-[0_0_15px_rgba(59,130,246,0.4)]" onClick={handleUpload} disabled={uploading}>
-            {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analyzing with AI...</> : <><Brain className="w-4 h-4 mr-2" />Analyze Resume</>}
-          </Button>
+          {/* Upload Zone */}
+          <div
+            data-testid="resume-drop-zone"
+            className={`drop-zone rounded-xl p-12 text-center cursor-pointer transition-all ${dragging ? 'active' : ''} ${file ? 'border-secondary/50' : ''}`}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => !file && document.getElementById('file-input').click()}
+          >
+            <input id="file-input" data-testid="file-input" type="file" className="hidden" accept=".pdf,.docx" onChange={(e) => e.target.files?.[0] && setFile(e.target.files[0])} />
+            {file ? (
+              <div className="flex items-center justify-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-secondary" />
+                </div>
+                <div className="text-left">
+                  <div className="font-medium">{file.name}</div>
+                  <div className="text-sm text-muted-foreground font-mono-data">{(file.size / 1024).toFixed(1)} KB</div>
+                </div>
+                <Button variant="ghost" size="icon" data-testid="remove-file-btn" onClick={(e) => { e.stopPropagation(); setFile(null); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-10 h-10 text-primary/50 mx-auto mb-4" />
+                <p className="text-muted-foreground mb-1">Drag & drop your resume here</p>
+                <p className="text-xs text-muted-foreground/60">PDF or DOCX, max 10MB</p>
+              </>
+            )}
+          </div>
+
+          {file && (
+            <div className="mt-4 flex justify-center gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  setFile(null);
+                  setProfileName("");
+                  if (allResumes.length > 0) setShowUploadForm(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                data-testid="upload-resume-btn" 
+                className="bg-primary hover:bg-primary/90 text-white px-8 shadow-[0_0_15px_rgba(59,130,246,0.4)]" 
+                onClick={handleUpload} 
+                disabled={uploading}
+              >
+                {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analyzing with AI...</> : <><Brain className="w-4 h-4 mr-2" />Analyze Resume</>}
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

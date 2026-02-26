@@ -111,10 +111,13 @@ export default function JobSearch() {
 
   const addToTracker = async (job) => {
     try {
+      const token = localStorage.getItem("token");
       await axios.post(`${API}/tracker`, {
         position: job.title, company: job.company || "", site_url: job.url || "",
         location: job.location || "", source: job.source || "", link: job.url || "",
         status: "New", date_posted: new Date().toISOString().split('T')[0],
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(`Added "${job.title}" to tracker`);
     } catch (e) {

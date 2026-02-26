@@ -60,11 +60,16 @@ export default function ResumeUpload() {
 
   const handleUpload = async () => {
     if (!file) return;
+    if (!profileName.trim()) {
+      toast.error("Please enter a profile name");
+      return;
+    }
     setUploading(true);
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("profile_name", profileName.trim());
       const res = await axios.post(`${API}/resume/upload`, formData, { 
         headers: { 
           "Content-Type": "multipart/form-data",
@@ -72,12 +77,33 @@ export default function ResumeUpload() {
         }, 
         timeout: 120000 
       });
-      setResumeData(res.data);
       toast.success("Resume analyzed successfully!");
+      setFile(null);
+      setProfileName("");
+      setShowUploadForm(false);
+      await loadAllResumes();
+      setSelectedResume(res.data);
     } catch (err) {
       toast.error(err.response?.data?.detail || "Upload failed");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteResume = async (resumeId) => {
+    if (!confirm("Are you sure you want to delete this resume?")) return;
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/resume/${resumeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Resume deleted");
+      await loadAllResumes();
+      if (selectedResume?.id === resumeId) {
+        setSelectedResume(allResumes[0] || null);
+      }
+    } catch (e) {
+      toast.error("Failed to delete");
     }
   };
 

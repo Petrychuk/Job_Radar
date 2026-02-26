@@ -467,6 +467,63 @@ export default function ResumeUpload() {
         </div>
       )}
 
+      {/* Real Job Listings from Scanned Sites */}
+      {allJobs.length > 0 && (
+        <div className="mt-8">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="font-bold text-lg uppercase tracking-wider text-primary" style={{ fontFamily: 'Chivo, sans-serif' }}>
+              Real Job Listings ({allJobs.length})
+            </h2>
+            {scanning && <Loader2 className="w-5 h-5 animate-spin text-primary" />}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {allJobs.map((job, idx) => (
+              <div
+                key={idx}
+                className="glass-card rounded-xl p-4 border border-white/5 hover:border-primary/30 transition-all cursor-pointer"
+                onClick={() => setSelectedJob(job)}
+              >
+                <h3 className="font-semibold mb-2 line-clamp-2">{job.title}</h3>
+                {job.company && (
+                  <p className="text-sm text-muted-foreground mb-1">{job.company}</p>
+                )}
+                {job.location && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground/70 mb-2">
+                    <MapPin className="w-3 h-3" />
+                    {job.location}
+                  </div>
+                )}
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
+                  <Badge variant="outline" className="text-xs border-white/10">
+                    {job.source}
+                  </Badge>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(job.url, '_blank');
+                    }}
+                    className="text-primary hover:text-primary/80 transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Job Detail Modal */}
+      <JobDetailModal
+        job={selectedJob}
+        open={!!selectedJob}
+        onClose={() => setSelectedJob(null)}
+        onSave={handleSaveToWishlist}
+        onApply={handleApply}
+        onGenerateDocs={handleGenerateDocs}
+      />
+
       {/* Recommendation Detail Modal */}
       {selectedRec && (
         <RecommendationModal

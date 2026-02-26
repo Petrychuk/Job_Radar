@@ -542,14 +542,14 @@ async def update_settings(settings: UserSettings, user: dict = Depends(require_u
         params.append(settings.cron_email_enabled)
         param_count += 1
         
-        params.append(uuid.UUID(user['id']))
+        params.append(to_uuid(user['id']))
         
         await conn.execute(
             f"UPDATE users SET {', '.join(update_fields)} WHERE id = ${param_count}",
             *params
         )
         
-        updated = await conn.fetchrow("SELECT id, email, name, notification_email, cron_email_enabled, created_at FROM users WHERE id = $1", uuid.UUID(user['id']))
+        updated = await conn.fetchrow("SELECT id, email, name, notification_email, cron_email_enabled, created_at FROM users WHERE id = $1", to_uuid(user['id']))
         updated_dict = dict(updated)
         updated_dict['id'] = str(updated_dict['id'])
         return updated_dict
@@ -645,7 +645,7 @@ async def upload_resume(file: UploadFile = File(...), profile_name: str = "Main 
         await conn.execute(
             """INSERT INTO resumes (id, user_id, filename, file_path, analysis, recommendations, profile_name, created_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)""",
-            resume_id, uuid.UUID(user['id']), file.filename, str(file_path),
+            resume_id, to_uuid(user['id']), file.filename, str(file_path),
             json.dumps(analysis), json.dumps(recommendations), profile_name, datetime.now(timezone.utc)
         )
         
@@ -661,7 +661,7 @@ async def get_all_resumes(user: dict = Depends(require_user)):
     async with db_pool.acquire() as conn:
         resumes = await conn.fetch(
             "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC",
-            uuid.UUID(user['id'])
+            to_uuid(user['id'])
         )
         return [{**dict(r), 'id': str(r['id']), 'user_id': str(r['user_id'])} for r in resumes]
 
@@ -672,12 +672,12 @@ async def get_resume(resume_id: Optional[str] = None, user: dict = Depends(requi
         if resume_id:
             resume = await conn.fetchrow(
                 "SELECT * FROM resumes WHERE id = $1 AND user_id = $2",
-                uuid.UUID(resume_id), uuid.UUID(user['id'])
+                uuid.UUID(resume_id), to_uuid(user['id'])
             )
         else:
             resume = await conn.fetchrow(
                 "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
-                uuid.UUID(user['id'])
+                to_uuid(user['id'])
             )
         if not resume:
             return None
@@ -692,7 +692,7 @@ async def delete_resume(resume_id: str, user: dict = Depends(require_user)):
     async with db_pool.acquire() as conn:
         result = await conn.execute(
             "DELETE FROM resumes WHERE id = $1 AND user_id = $2",
-            uuid.UUID(resume_id), uuid.UUID(user['id'])
+            uuid.UUID(resume_id), to_uuid(user['id'])
         )
         if result == "DELETE 0":
             raise HTTPException(status_code=404, detail="Resume not found")
@@ -705,12 +705,12 @@ async def scan_jobs(resume_id: Optional[str] = None, user: dict = Depends(requir
         if resume_id:
             resume = await conn.fetchrow(
                 "SELECT * FROM resumes WHERE id = $1 AND user_id = $2",
-                uuid.UUID(resume_id), uuid.UUID(user['id'])
+                uuid.UUID(resume_id), to_uuid(user['id'])
             )
         else:
             resume = await conn.fetchrow(
                 "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
-                uuid.UUID(user['id'])
+                to_uuid(user['id'])
             )
         if not resume:
             raise HTTPException(status_code=400, detail="Upload a resume first")
@@ -721,7 +721,7 @@ async def scan_jobs(resume_id: Optional[str] = None, user: dict = Depends(requir
             keywords = analysis.get('preferred_titles', [])[:3]
 
         all_sites = [s for s in JOB_SITES if s.get('active')]
-        custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", uuid.UUID(user['id']))
+        custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", to_uuid(user['id']))
         for cs in custom_sites:
             all_sites.append({
                 "id": str(cs['id']), "name": cs['name'], "url": cs['url'],
@@ -737,7 +737,7 @@ async def scan_jobs(resume_id: Optional[str] = None, user: dict = Depends(requir
         await conn.execute(
             """INSERT INTO scans (id, user_id, keywords, results, total_jobs_found, sites_scanned, created_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7)""",
-            scan_id, uuid.UUID(user['id']), keywords, json.dumps(scan_results),
+            scan_id, to_uuid(user['id']), keywords, json.dumps(scan_results),
             sum(len(r.get('jobs', [])) for r in scan_results), len(scan_results), datetime.now(timezone.utc)
         )
         
@@ -753,7 +753,7 @@ async def get_jobs(user: dict = Depends(require_user)):
     async with db_pool.acquire() as conn:
         scan = await conn.fetchrow(
             "SELECT * FROM scans WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
-            uuid.UUID(user['id'])
+            to_uuid(user['id'])
         )
         if not scan:
             return None
@@ -773,7 +773,7 @@ async def get_search_links(keyword: str = "software developer", user: dict = Dep
             links.append({"site_id": site['id'], "site_name": site['name'], "site_url": site['url'], "search_url": search_url, "custom": False})
     
     async with db_pool.acquire() as conn:
-        custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", uuid.UUID(user['id']))
+        custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", to_uuid(user['id']))
         for cs in custom_sites:
             links.append({"site_id": str(cs['id']), "site_name": cs['name'], "site_url": cs['url'], "search_url": cs['careers_url'], "custom": True})
     return links
@@ -786,7 +786,7 @@ async def add_to_wishlist(item: WishlistItemCreate, user: dict = Depends(require
         await conn.execute(
             """INSERT INTO wishlist (id, user_id, title, company_type, match_score, salary_range, why_match, search_keywords, status, created_at)
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)""",
-            item_id, uuid.UUID(user['id']), item.title, item.company_type, item.match_score,
+            item_id, to_uuid(user['id']), item.title, item.company_type, item.match_score,
             item.salary_range, item.why_match, item.search_keywords, "saved", datetime.now(timezone.utc)
         )
         result = await conn.fetchrow("SELECT * FROM wishlist WHERE id = $1", item_id)
@@ -797,7 +797,7 @@ async def get_wishlist(user: dict = Depends(require_user)):
     async with db_pool.acquire() as conn:
         items = await conn.fetch(
             "SELECT * FROM wishlist WHERE user_id = $1 ORDER BY created_at DESC",
-            uuid.UUID(user['id'])
+            to_uuid(user['id'])
         )
         return [{**dict(i), 'id': str(i['id']), 'user_id': str(i['user_id'])} for i in items]
 
@@ -808,12 +808,12 @@ async def get_tracked_jobs(status: Optional[str] = None, user: dict = Depends(re
         if status and status != "All":
             jobs = await conn.fetch(
                 "SELECT * FROM tracked_jobs WHERE user_id = $1 AND status = $2 ORDER BY created_at DESC",
-                uuid.UUID(user['id']), status
+                to_uuid(user['id']), status
             )
         else:
             jobs = await conn.fetch(
                 "SELECT * FROM tracked_jobs WHERE user_id = $1 ORDER BY created_at DESC",
-                uuid.UUID(user['id'])
+                to_uuid(user['id'])
             )
         return [{**dict(j), 'id': str(j['id']), 'user_id': str(j['user_id'])} for j in jobs]
 
@@ -829,7 +829,7 @@ async def add_tracked_job(job: TrackedJobCreate, user: dict = Depends(require_us
                 visa_sponsorship, date_applied, response_date, interview_stages, rejection_reason,
                 recruiter_name, follow_up_date, linkedin_connection, cv_profile_used, created_at, updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)""",
-            job_id, uuid.UUID(user['id']), data['date_posted'], data['company'], data['site_url'],
+            job_id, to_uuid(user['id']), data['date_posted'], data['company'], data['site_url'],
             data['position'], data['salary'], data['location'], data['technology'], data['status'],
             data['source'], data['link'], data['contact'], data['notes'], data['work_mode'],
             data['contract_type'], data['visa_sponsorship'], data['date_applied'], data['response_date'],
@@ -845,7 +845,7 @@ async def get_hidden_recommendations(user: dict = Depends(require_user)):
     async with db_pool.acquire() as conn:
         hidden = await conn.fetch(
             "SELECT title FROM hidden_recommendations WHERE user_id = $1",
-            uuid.UUID(user['id'])
+            to_uuid(user['id'])
         )
         return [h['title'] for h in hidden]
 
@@ -856,7 +856,7 @@ async def hide_recommendation(title: str, user: dict = Depends(require_user)):
         await conn.execute(
             """INSERT INTO hidden_recommendations (id, user_id, title, hidden_at)
                VALUES ($1, $2, $3, $4)""",
-            rec_id, uuid.UUID(user['id']), title, datetime.now(timezone.utc)
+            rec_id, to_uuid(user['id']), title, datetime.now(timezone.utc)
         )
         return {"message": "Hidden"}
 

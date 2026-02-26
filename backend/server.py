@@ -694,12 +694,18 @@ async def delete_resume(resume_id: str, user: dict = Depends(require_user)):
 
 # ─── Job Scanning Routes ───
 @api_router.post("/jobs/scan")
-async def scan_jobs(user: dict = Depends(require_user)):
+async def scan_jobs(resume_id: Optional[str] = None, user: dict = Depends(require_user)):
     async with db_pool.acquire() as conn:
-        resume = await conn.fetchrow(
-            "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
-            uuid.UUID(user['id'])
-        )
+        if resume_id:
+            resume = await conn.fetchrow(
+                "SELECT * FROM resumes WHERE id = $1 AND user_id = $2",
+                uuid.UUID(resume_id), uuid.UUID(user['id'])
+            )
+        else:
+            resume = await conn.fetchrow(
+                "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+                uuid.UUID(user['id'])
+            )
         if not resume:
             raise HTTPException(status_code=400, detail="Upload a resume first")
 

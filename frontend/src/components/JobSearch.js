@@ -422,9 +422,36 @@ export default function JobSearch() {
                         <TableCell className="text-sm text-muted-foreground">{job.location || '-'}</TableCell>
                         <TableCell><Badge variant="outline" className="text-xs border-white/10">{job.source}</Badge></TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="sm" data-testid={`add-to-tracker-${i}`} onClick={() => addToTracker(job)} className="text-primary hover:text-primary hover:bg-primary/10">
-                            <Plus className="w-3 h-3 mr-1" /> Track
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              data-testid={`add-to-tracker-${i}`} 
+                              onClick={() => addToTracker(job)} 
+                              className="text-secondary hover:text-secondary hover:bg-secondary/10"
+                              title="Track this job"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => addToWishlist(job)} 
+                              className="text-pink-400 hover:text-pink-400 hover:bg-pink-400/10"
+                              title="Add to wishlist"
+                            >
+                              <Heart className="w-3 h-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => hideJob(job)} 
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              title="Hide this job"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -76,9 +76,12 @@ export default function ResumeUpload() {
   const handleSaveToWishlist = async (rec) => {
     setSavingId(rec.title);
     try {
+      const token = localStorage.getItem("token");
       await axios.post(`${API}/wishlist`, {
         title: rec.title, company_type: rec.company_type, match_score: rec.match_score,
         salary_range: rec.salary_range, why_match: rec.why_match, search_keywords: rec.search_keywords || []
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(`"${rec.title}" saved to wishlist!`);
     } catch (e) {
@@ -90,7 +93,10 @@ export default function ResumeUpload() {
 
   const handleHide = async (title) => {
     try {
-      await axios.post(`${API}/recommendations/hide?title=${encodeURIComponent(title)}`);
+      const token = localStorage.getItem("token");
+      await axios.post(`${API}/recommendations/hide?title=${encodeURIComponent(title)}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setHiddenTitles(prev => [...prev, title]);
       toast.success("Recommendation hidden");
     } catch (e) {
@@ -100,11 +106,14 @@ export default function ResumeUpload() {
 
   const handleApply = async (rec) => {
     try {
+      const token = localStorage.getItem("token");
       await axios.post(`${API}/tracker`, {
         position: rec.title, company: rec.company_type, salary: rec.salary_range,
         location: "Australia", technology: (rec.search_keywords || []).join(", "),
         status: "New", source: "AI Recommendation", date_posted: new Date().toISOString().split('T')[0],
         notes: `Match: ${rec.match_score}% - ${rec.why_match}`
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       toast.success(`"${rec.title}" added to tracker as New!`);
     } catch (e) {

@@ -622,7 +622,7 @@ async def reset_password(data: ResetPasswordRequest):
 
 # ─── Resume Routes ───
 @api_router.post("/resume/upload")
-async def upload_resume(file: UploadFile = File(...), user: dict = Depends(require_user)):
+async def upload_resume(file: UploadFile = File(...), profile_name: str = "Main Resume", user: dict = Depends(require_user)):
     if not file.filename.lower().endswith(('.pdf', '.docx')):
         raise HTTPException(status_code=400, detail="Only PDF and DOCX files are supported")
 
@@ -637,10 +637,10 @@ async def upload_resume(file: UploadFile = File(...), user: dict = Depends(requi
     async with db_pool.acquire() as conn:
         resume_id = uuid.uuid4()
         await conn.execute(
-            """INSERT INTO resumes (id, user_id, filename, file_path, analysis, recommendations, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+            """INSERT INTO resumes (id, user_id, filename, file_path, analysis, recommendations, profile_name, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8)""",
             resume_id, uuid.UUID(user['id']), file.filename, str(file_path),
-            json.dumps(analysis), json.dumps(recommendations), datetime.now(timezone.utc)
+            json.dumps(analysis), json.dumps(recommendations), profile_name, datetime.now(timezone.utc)
         )
         
         resume = await conn.fetchrow("SELECT * FROM resumes WHERE id = $1", resume_id)
@@ -649,19 +649,48 @@ async def upload_resume(file: UploadFile = File(...), user: dict = Depends(requi
         result['user_id'] = str(result['user_id'])
         return result
 
-@api_router.get("/resume")
-async def get_resume(user: dict = Depends(require_user)):
+@api_router.get("/resumes")
+async def get_all_resumes(user: dict = Depends(require_user)):
+    """Get all resumes for the user"""
     async with db_pool.acquire() as conn:
-        resume = await conn.fetchrow(
-            "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+        resumes = await conn.fetch(
+            "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC",
             uuid.UUID(user['id'])
         )
+        return [{**dict(r), 'id': str(r['id']), 'user_id': str(r['user_id'])} for r in resumes]
+
+@api_router.get("/resume")
+async def get_resume(resume_id: Optional[str] = None, user: dict = Depends(require_user)):
+    """Get specific resume by ID or latest resume"""
+    async with db_pool.acquire() as conn:
+        if resume_id:
+            resume = await conn.fetchrow(
+                "SELECT * FROM resumes WHERE id = $1 AND user_id = $2",
+                uuid.UUID(resume_id), uuid.UUID(user['id'])
+            )
+        else:
+            resume = await conn.fetchrow(
+                "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+                uuid.UUID(user['id'])
+            )
         if not resume:
             return None
         result = dict(resume)
         result['id'] = str(result['id'])
         result['user_id'] = str(result['user_id'])
         return result
+
+@api_router.delete("/resume/{resume_id}")
+async def delete_resume(resume_id: str, user: dict = Depends(require_user)):
+    """Delete a specific resume"""
+    async with db_pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM resumes WHERE id = $1 AND user_id = $2",
+            uuid.UUID(resume_id), uuid.UUID(user['id'])
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Resume not found")
+        return {"message": "Resume deleted"}
 
 # ─── Job Scanning Routes ───
 @api_router.post("/jobs/scan")

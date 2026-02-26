@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Upload, FileText, Brain, Briefcase, Star, Loader2, X, CheckCircle, Heart, Trash2, ExternalLink, FileDown, Search, Plus, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import RecommendationModal from "@/components/RecommendationModal";
 
 const API = process.env.REACT_APP_BACKEND_URL;

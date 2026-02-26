@@ -43,6 +43,8 @@ function App() {
           <Route path="/auth" element={
             user ? <Navigate to="/dashboard/tracker" /> : <Auth onLogin={handleLogin} />
           } />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/dashboard" element={
             user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/auth" />
           } />

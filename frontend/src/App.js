@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/sonner";
 import Landing from "@/components/Landing";
 import Dashboard from "@/components/Dashboard";
 import Auth from "@/components/Auth";
+import ForgotPassword from "@/components/ForgotPassword";
+import ResetPassword from "@/components/ResetPassword";
 
 function App() {
   const [user, setUser] = useState(null);

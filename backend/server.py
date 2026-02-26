@@ -548,6 +548,78 @@ async def update_settings(settings: UserSettings, user: dict = Depends(require_u
         updated_dict['id'] = str(updated_dict['id'])
         return updated_dict
 
+@api_router.post("/auth/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest):
+    """Send password reset email"""
+    async with db_pool.acquire() as conn:
+        user = await conn.fetchrow("SELECT id, email, name FROM users WHERE email = $1", data.email)
+        if not user:
+            # Don't reveal if email exists or not for security
+            return {"message": "If this email is registered, you will receive a password reset link"}
+        
+        # Generate reset token
+        reset_token = str(uuid.uuid4())
+        expires_at = datetime.now(timezone.utc) + timedelta(hours=1)  # Token valid for 1 hour
+        
+        await conn.execute(
+            """INSERT INTO password_reset_tokens (user_id, token, expires_at)
+               VALUES ($1, $2, $3)""",
+            user['id'], reset_token, expires_at
+        )
+        
+        # Send email with reset link
+        reset_link = f"https://19d1ab2d-7f68-46bf-987d-9e9c61d24cd9.preview.emergentagent.com/reset-password?token={reset_token}"
+        html_content = f"""
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#e5e5e5;padding:24px;border-radius:12px">
+            <h1 style="color:#3b82f6;margin:0 0 8px 0">JOB_RADAR</h1>
+            <h2 style="color:#22c55e;margin:0 0 20px 0">Password Reset Request</h2>
+            <p>Hello {user['name']},</p>
+            <p>You requested to reset your password. Click the button below to reset it:</p>
+            <div style="text-align:center;margin:30px 0">
+                <a href="{reset_link}" style="background:#3b82f6;color:white;padding:12px 24px;text-decoration:none;border-radius:6px;display:inline-block">
+                    Reset Password
+                </a>
+            </div>
+            <p style="color:#94a3b8;font-size:14px">This link will expire in 1 hour.</p>
+            <p style="color:#94a3b8;font-size:14px">If you didn't request this, please ignore this email.</p>
+            <hr style="border:none;border-top:1px solid #333;margin:24px 0">
+            <p style="font-size:12px;color:#666">Job Radar - AI-powered job hunting</p>
+        </div>
+        """
+        
+        await send_email_notification(user['email'], "Reset Your Password - Job Radar", html_content)
+        
+        return {"message": "If this email is registered, you will receive a password reset link"}
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: ResetPasswordRequest):
+    """Reset password using token"""
+    async with db_pool.acquire() as conn:
+        # Check if token exists and is valid
+        token_record = await conn.fetchrow(
+            """SELECT * FROM password_reset_tokens 
+               WHERE token = $1 AND used = FALSE AND expires_at > $2""",
+            data.token, datetime.now(timezone.utc)
+        )
+        
+        if not token_record:
+            raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+        
+        # Update password
+        new_password_hash = hash_password(data.new_password)
+        await conn.execute(
+            "UPDATE users SET password_hash = $1 WHERE id = $2",
+            new_password_hash, token_record['user_id']
+        )
+        
+        # Mark token as used
+        await conn.execute(
+            "UPDATE password_reset_tokens SET used = TRUE WHERE token = $1",
+            data.token
+        )
+        
+        return {"message": "Password reset successfully"}
+
 # ─── Resume Routes ───
 @api_router.post("/resume/upload")
 async def upload_resume(file: UploadFile = File(...), user: dict = Depends(require_user)):

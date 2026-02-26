@@ -849,6 +849,18 @@ async def generate_documents_for_job(req: DocumentGenerateRequest, user: dict = 
         
         return docs
 
+@api_router.delete("/wishlist/{item_id}")
+async def delete_wishlist_item(item_id: str, user: dict = Depends(require_user)):
+    """Delete item from wishlist"""
+    async with db_pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM wishlist WHERE id = $1 AND user_id = $2",
+            uuid.UUID(item_id), to_uuid(user['id'])
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Item not found")
+        return {"message": "Deleted"}
+
 # ─── Tracker Routes ───
 @api_router.get("/tracker")
 async def get_tracked_jobs(status: Optional[str] = None, user: dict = Depends(require_user)):

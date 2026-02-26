@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import JobDetailModal from "@/components/JobDetailModal";
+import RecommendationModal from "@/components/RecommendationModal";
 
 const API = process.env.REACT_APP_BACKEND_URL;
 

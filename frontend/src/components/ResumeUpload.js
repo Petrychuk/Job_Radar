@@ -24,14 +24,20 @@ export default function ResumeUpload() {
 
   const loadExistingResume = async () => {
     try {
-      const res = await axios.get(`${API}/resume`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/resume`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       if (res.data && res.data.analysis) setResumeData(res.data);
     } catch (e) { /* ignore */ }
   };
 
   const loadHidden = async () => {
     try {
-      const res = await axios.get(`${API}/recommendations/hidden`);
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/recommendations/hidden`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setHiddenTitles(res.data || []);
     } catch (e) { /* ignore */ }
   };

@@ -11,15 +11,16 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function ResumeUpload() {
   const [file, setFile] = useState(null);
-  const [profileName, setProfileName] = useState("");
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const [allResumes, setAllResumes] = useState([]);
   const [selectedResume, setSelectedResume] = useState(null);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [hiddenTitles, setHiddenTitles] = useState([]);
   const [selectedRec, setSelectedRec] = useState(null);
   const [savingId, setSavingId] = useState(null);
+  const [jobResults, setJobResults] = useState(null);
 
   useEffect(() => {
     loadAllResumes();
@@ -61,17 +62,17 @@ export default function ResumeUpload() {
 
   const handleUpload = async () => {
     if (!file) return;
-    if (!profileName.trim()) {
-      toast.error("Please enter a profile name");
-      return;
-    }
     setUploading(true);
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("file", file);
+      
+      // Use filename without extension as profile name
+      const profileName = file.name.replace(/\.(pdf|docx)$/i, '');
+      
       const res = await axios.post(
-        `${API}/resume/upload?profile_name=${encodeURIComponent(profileName.trim())}`, 
+        `${API}/resume/upload?profile_name=${encodeURIComponent(profileName)}`, 
         formData, 
         { 
           headers: { 
@@ -83,14 +84,38 @@ export default function ResumeUpload() {
       );
       toast.success("Resume analyzed successfully!");
       setFile(null);
-      setProfileName("");
       setShowUploadForm(false);
       await loadAllResumes();
       setSelectedResume(res.data);
+      
+      // Automatically scan for jobs after resume analysis
+      await scanJobs(res.data.id);
+      
     } catch (err) {
       toast.error(err.response?.data?.detail || "Upload failed");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const scanJobs = async (resumeId) => {
+    setScanning(true);
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(
+        `${API}/jobs/scan?resume_id=${resumeId}`,
+        {},
+        { 
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 60000 
+        }
+      );
+      setJobResults(res.data);
+      toast.success(`Found ${res.data.total_jobs_found} jobs from ${res.data.sites_scanned} sites!`);
+    } catch (err) {
+      toast.error("Job scan failed: " + (err.response?.data?.detail || err.message));
+    } finally {
+      setScanning(false);
     }
   };
 

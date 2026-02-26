@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import { toast } from "sonner";
-import { Upload, FileText, Brain, Briefcase, Star, Loader2, X, CheckCircle, Heart, Trash2, ExternalLink, FileDown, Search } from "lucide-react";
+import { Upload, FileText, Brain, Briefcase, Star, Loader2, X, CheckCircle, Heart, Trash2, ExternalLink, FileDown, Search, Plus, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RecommendationModal from "@/components/RecommendationModal";
@@ -10,26 +10,34 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function ResumeUpload() {
   const [file, setFile] = useState(null);
+  const [profileName, setProfileName] = useState("");
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [resumeData, setResumeData] = useState(null);
+  const [allResumes, setAllResumes] = useState([]);
+  const [selectedResume, setSelectedResume] = useState(null);
+  const [showUploadForm, setShowUploadForm] = useState(false);
   const [hiddenTitles, setHiddenTitles] = useState([]);
   const [selectedRec, setSelectedRec] = useState(null);
   const [savingId, setSavingId] = useState(null);
 
   useEffect(() => {
-    loadExistingResume();
+    loadAllResumes();
     loadHidden();
   }, []);
 
-  const loadExistingResume = async () => {
+  const loadAllResumes = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`${API}/resume`, {
+      const res = await axios.get(`${API}/resumes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      if (res.data && res.data.analysis) setResumeData(res.data);
-    } catch (e) { /* ignore */ }
+      setAllResumes(res.data || []);
+      if (res.data && res.data.length > 0) {
+        setSelectedResume(res.data[0]);
+      }
+    } catch (e) { 
+      console.error("Load resumes error:", e);
+    }
   };
 
   const loadHidden = async () => {

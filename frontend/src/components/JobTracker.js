@@ -23,11 +23,16 @@ export default function JobTracker() {
 
   const loadJobs = async () => {
     try {
+      const token = localStorage.getItem("token");
       const params = filterStatus !== "All" ? { status: filterStatus } : {};
-      const res = await axios.get(`${API}/tracker`, { params });
+      const res = await axios.get(`${API}/tracker`, { 
+        params,
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setJobs(res.data);
     } catch (e) {
       toast.error("Failed to load jobs");
+      console.error("Load jobs error:", e);
     } finally {
       setLoading(false);
     }
@@ -35,7 +40,10 @@ export default function JobTracker() {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/tracker/${id}`);
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/tracker/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setJobs(prev => prev.filter(j => j.id !== id));
       toast.success("Job removed");
     } catch (e) {
@@ -45,7 +53,10 @@ export default function JobTracker() {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      await axios.put(`${API}/tracker/${id}`, { status: newStatus });
+      const token = localStorage.getItem("token");
+      await axios.put(`${API}/tracker/${id}`, { status: newStatus }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setJobs(prev => prev.map(j => j.id === id ? { ...j, status: newStatus } : j));
       toast.success(`Status updated to ${newStatus}`);
     } catch (e) {

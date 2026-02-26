@@ -48,16 +48,22 @@ export default function AddJobDialog({ open, onOpenChange, job, onSave }) {
     }
     setSaving(true);
     try {
+      const token = localStorage.getItem("token");
       if (job?.id) {
-        await axios.put(`${API}/tracker/${job.id}`, form);
+        await axios.put(`${API}/tracker/${job.id}`, form, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         toast.success("Job updated");
       } else {
-        await axios.post(`${API}/tracker`, form);
+        await axios.post(`${API}/tracker`, form, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         toast.success("Job added to tracker");
       }
       onSave();
     } catch (e) {
-      toast.error("Save failed");
+      toast.error("Save failed: " + (e.response?.data?.detail || e.message));
+      console.error("Save error:", e);
     } finally {
       setSaving(false);
     }

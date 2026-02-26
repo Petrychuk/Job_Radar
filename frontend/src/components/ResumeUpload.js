@@ -54,9 +54,16 @@ export default function ResumeUpload() {
     if (!file) return;
     setUploading(true);
     try {
+      const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("file", file);
-      const res = await axios.post(`${API}/resume/upload`, formData, { headers: { "Content-Type": "multipart/form-data" }, timeout: 120000 });
+      const res = await axios.post(`${API}/resume/upload`, formData, { 
+        headers: { 
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`
+        }, 
+        timeout: 120000 
+      });
       setResumeData(res.data);
       toast.success("Resume analyzed successfully!");
     } catch (err) {

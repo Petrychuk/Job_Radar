@@ -194,6 +194,13 @@ class UserSettings(BaseModel):
     notification_email: Optional[str] = None
     cron_email_enabled: bool = False
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class TrackedJobCreate(BaseModel):
     date_posted: str = ""
     company: str = ""

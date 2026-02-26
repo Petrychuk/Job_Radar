@@ -2,9 +2,8 @@ import "@/App.css";
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import Landing from "@/components/Landing";
+import Home from "@/components/Home";
 import Dashboard from "@/components/Dashboard";
-import Auth from "@/components/Auth";
 import ForgotPassword from "@/components/ForgotPassword";
 import ResetPassword from "@/components/ResetPassword";
 
@@ -39,17 +38,16 @@ function App() {
     <div className="App min-h-screen bg-[#02040a]">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={
-            user ? <Navigate to="/dashboard/tracker" /> : <Auth onLogin={handleLogin} />
+          <Route path="/" element={
+            user ? <Navigate to="/dashboard/tracker" /> : <Home onLogin={handleLogin} />
           } />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/dashboard" element={
-            user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/auth" />
+            user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" />
           } />
           <Route path="/dashboard/:section" element={
-            user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/auth" />
+            user ? <Dashboard user={user} onLogout={handleLogout} /> : <Navigate to="/" />
           } />
         </Routes>
       </BrowserRouter>

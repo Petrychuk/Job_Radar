@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import ResumeUpload from "@/components/ResumeUpload";
 import JobSearch from "@/components/JobSearch";
+import FreelanceSearch from "@/components/FreelanceSearch";
 import JobTracker from "@/components/JobTracker";
 import Statistics from "@/components/Statistics";
 import Wishlist from "@/components/Wishlist";
@@ -45,7 +46,7 @@ export default function Dashboard({ user, onLogout }) {
     switch (activeSection) {
       case "resume": return <ResumeUpload />;
       case "profiles": return <CVProfiles />;
-      case "search": return <JobSearch />;
+      case "search": return <FreelanceSearch />;
       case "tracker": return <JobTracker />;
       case "wishlist": return <Wishlist />;
       case "cron": return <CronJobs user={user} />;

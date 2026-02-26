@@ -291,7 +291,7 @@ def parse_ai_json(response_text: str) -> dict:
         match = re.search(r'[\[{].*[\]}]', text, re.DOTALL)
         if match:
             return json.loads(match.group())
-        raise ValueError(f"Could not parse AI response as JSON")
+        raise ValueError("Could not parse AI response as JSON")
 
 async def analyze_resume_with_ai(file_path: str, filename: str) -> dict:
     chat = LlmChat(

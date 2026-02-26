@@ -128,9 +128,12 @@ export default function JobSearch() {
   const handleAddCustomSite = async () => {
     if (!newSite.name.trim() || !newSite.url.trim()) { toast.error("Name and URL required"); return; }
     try {
+      const token = localStorage.getItem("token");
       const res = await axios.post(`${API}/custom-sites`, {
         ...newSite,
         careers_url: newSite.careers_url || newSite.url,
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       setCustomSites(prev => [res.data, ...prev]);
       setSiteDialogOpen(false);
@@ -143,7 +146,10 @@ export default function JobSearch() {
 
   const handleDeleteCustomSite = async (id) => {
     try {
-      await axios.delete(`${API}/custom-sites/${id}`);
+      const token = localStorage.getItem("token");
+      await axios.delete(`${API}/custom-sites/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setCustomSites(prev => prev.filter(s => s.id !== id));
       toast.success("Site removed");
     } catch (e) {

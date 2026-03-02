@@ -389,8 +389,8 @@ export default function JobSearch() {
 
           {filteredJobs.length > 0 && (
             <div className="glass-card rounded-xl overflow-hidden" data-testid="scraped-jobs-table">
-              <div className="p-4 border-b border-white/5 flex items-center justify-between">
-                <h3 className="font-bold text-xs uppercase tracking-wider" style={{ fontFamily: 'Chivo, sans-serif' }}>
+              <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                <h3 className="font-bold text-sm uppercase tracking-wider" style={{ fontFamily: 'Chivo, sans-serif' }}>
                   Found Jobs <span className="text-primary">({filteredJobs.length})</span>
                 </h3>
                 <Button variant="ghost" size="sm" onClick={handleScan} disabled={scanning} data-testid="rescan-btn">
@@ -401,55 +401,59 @@ export default function JobSearch() {
                 <Table>
                   <TableHeader>
                     <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Position</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground pl-5">Position</TableHead>
                       <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Company</TableHead>
                       <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Location</TableHead>
                       <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground">Source</TableHead>
-                      <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground w-20">Action</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider font-mono-data text-muted-foreground text-right pr-5">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredJobs.slice(0, 50).map((job, i) => (
-                      <TableRow key={i} className="border-white/5 hover:bg-white/[0.02]">
-                        <TableCell className="font-medium text-sm max-w-xs">
+                    {filteredJobs.slice(0, 100).map((job, i) => (
+                      <TableRow key={i} className="border-white/5 hover:bg-white/[0.02]" data-testid={`job-row-${i}`}>
+                        <TableCell className="font-medium max-w-md pl-5">
                           {job.url ? (
-                            <a href={job.url} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors flex items-center gap-1">
-                              {job.title} <ExternalLink className="w-3 h-3 shrink-0 opacity-50" />
+                            <a href={job.url} target="_blank" rel="noopener noreferrer" 
+                               className="text-blue-400 hover:text-blue-300 hover:underline transition-colors inline-flex items-center gap-1.5 leading-snug"
+                               data-testid={`job-link-${i}`}>
+                              {job.title}
+                              <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-60" />
                             </a>
-                          ) : job.title}
+                          ) : <span className="text-muted-foreground">{job.title}</span>}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{job.company || '-'}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{job.location || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{job.company || '-'}</TableCell>
+                        <TableCell className="text-muted-foreground">{job.location || '-'}</TableCell>
                         <TableCell><Badge variant="outline" className="text-xs border-white/10">{job.source}</Badge></TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
+                        <TableCell className="pr-5">
+                          <div className="flex gap-1 justify-end">
                             <Button 
                               variant="ghost" 
                               size="sm" 
                               data-testid={`add-to-tracker-${i}`} 
                               onClick={() => addToTracker(job)} 
-                              className="text-secondary hover:text-secondary hover:bg-secondary/10"
+                              className="h-8 w-8 p-0 text-secondary hover:text-secondary hover:bg-secondary/10"
                               title="Track this job"
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
                               onClick={() => addToWishlist(job)} 
-                              className="text-pink-400 hover:text-pink-400 hover:bg-pink-400/10"
+                              className="h-8 w-8 p-0 text-pink-400 hover:text-pink-400 hover:bg-pink-400/10"
                               title="Add to wishlist"
                             >
-                              <Heart className="w-3 h-3" />
+                              <Heart className="w-4 h-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
                               size="sm"
                               onClick={() => hideJob(job)} 
-                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              title="Hide this job"
+                              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              title="Delete this job"
+                              data-testid={`hide-job-${i}`}
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>

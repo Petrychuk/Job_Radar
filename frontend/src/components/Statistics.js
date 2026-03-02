@@ -29,7 +29,10 @@ export default function Statistics() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await axios.get(`${API}/stats`);
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API}/stats`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setStats(res.data);
       } catch (e) { /* ignore */ }
       finally { setLoading(false); }

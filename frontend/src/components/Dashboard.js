@@ -120,8 +120,8 @@ export default function Dashboard({ user, onLogout }) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
-          <div className="p-6 max-w-[1400px] mx-auto">
+        <main className="flex-1 overflow-auto text-[15px]">
+          <div className="p-6 w-full">
             {renderContent()}
           </div>
         </main>

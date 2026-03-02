@@ -165,34 +165,39 @@ export default function JobDetailModal({ job, open, onClose, onSave, onApply, on
         </div>
 
         {/* Generate ATS Documents */}
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wider mb-3">
-            Generate ATS Documents
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => onGenerateDocs(job, 'both')}
-              className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30"
-            >
-              <FileDown className="w-4 h-4 mr-2" />
-              Resume + Cover Letter
-            </Button>
-            <Button
-              onClick={() => onGenerateDocs(job, 'resume')}
-              variant="outline"
-              className="border-white/10"
-            >
-              Resume Only
-            </Button>
-            <Button
-              onClick={() => onGenerateDocs(job, 'cover_letter')}
-              variant="outline"
-              className="border-white/10"
-            >
-              Cover Letter Only
-            </Button>
+        {onGenerateDocs && (
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider mb-3">
+              Generate ATS Documents
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => onGenerateDocs(job, 'both')}
+                className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30"
+              >
+                <FileDown className="w-4 h-4 mr-2" />
+                Resume + Cover Letter
+              </Button>
+              <Button
+                onClick={() => onGenerateDocs(job, 'resume')}
+                variant="outline"
+                className="border-white/10"
+              >
+                Resume Only
+              </Button>
+              <Button
+                onClick={() => onGenerateDocs(job, 'cover_letter')}
+                variant="outline"
+                className="border-white/10"
+              >
+                Cover Letter Only
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              AI will generate tailored documents based on your resume and this job description
+            </p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

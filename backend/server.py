@@ -1140,6 +1140,153 @@ async def export_tracker(user: dict = Depends(require_user)):
         return FileResponse(str(export_path), filename="job_tracker_export.xlsx",
                            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
+# ─── Cron Search Routes ───
+@api_router.get("/cron/jobs")
+async def get_cron_jobs(user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        jobs = await conn.fetch(
+            "SELECT * FROM cron_searches WHERE user_id = $1 ORDER BY created_at DESC",
+            to_uuid(user['id'])
+        )
+        return [{**dict(j), 'id': str(j['id']), 'user_id': str(j['user_id'])} for j in jobs]
+
+@api_router.post("/cron/jobs")
+async def create_cron_job(job: CronJobCreate, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        job_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO cron_searches (id, user_id, title, keywords, location, active, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)""",
+            job_id, to_uuid(user['id']), job.title, job.keywords, job.location, job.active, datetime.now(timezone.utc)
+        )
+        result = await conn.fetchrow("SELECT * FROM cron_searches WHERE id = $1", job_id)
+        return {**dict(result), 'id': str(result['id']), 'user_id': str(result['user_id'])}
+
+@api_router.delete("/cron/jobs/{job_id}")
+async def delete_cron_job(job_id: str, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        result = await conn.execute(
+            "DELETE FROM cron_searches WHERE id = $1 AND user_id = $2",
+            uuid.UUID(job_id), to_uuid(user['id'])
+        )
+        if result == "DELETE 0":
+            raise HTTPException(status_code=404, detail="Not found")
+        return {"message": "Deleted"}
+
+@api_router.put("/cron/jobs/{job_id}/toggle")
+async def toggle_cron_job(job_id: str, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        job = await conn.fetchrow(
+            "SELECT active FROM cron_searches WHERE id = $1 AND user_id = $2",
+            uuid.UUID(job_id), to_uuid(user['id'])
+        )
+        if not job:
+            raise HTTPException(status_code=404, detail="Not found")
+        new_active = not job['active']
+        await conn.execute(
+            "UPDATE cron_searches SET active = $1 WHERE id = $2",
+            new_active, uuid.UUID(job_id)
+        )
+        return {"active": new_active}
+
+@api_router.post("/cron/run/{job_id}")
+async def run_cron_job(job_id: str, send_email: bool = False, user_email: str = "", user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        job = await conn.fetchrow(
+            "SELECT * FROM cron_searches WHERE id = $1 AND user_id = $2",
+            uuid.UUID(job_id), to_uuid(user['id'])
+        )
+        if not job:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        keywords = job['keywords'] if job['keywords'] else [job['title']]
+        all_sites = [s for s in JOB_SITES if s.get('active')]
+        semaphore = asyncio.Semaphore(5)
+        tasks = [scrape_single_site(site, keywords, semaphore) for site in all_sites]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        scan_results = [r for r in results if not isinstance(r, Exception)]
+
+        total_jobs = sum(len(r.get('jobs', [])) for r in scan_results)
+
+        result_id = uuid.uuid4()
+        await conn.execute(
+            """INSERT INTO cron_results (id, cron_id, keywords, results, total_jobs_found, run_at)
+               VALUES ($1, $2, $3, $4, $5, $6)""",
+            result_id, uuid.UUID(job_id), keywords, json.dumps(scan_results),
+            total_jobs, datetime.now(timezone.utc)
+        )
+
+        await conn.execute(
+            "UPDATE cron_searches SET last_run = $1, results_count = $2 WHERE id = $3",
+            datetime.now(timezone.utc), total_jobs, uuid.UUID(job_id)
+        )
+
+        email_sent = False
+        if send_email and user_email and total_jobs > 0:
+            html = generate_cron_email_html(job['title'], scan_results, total_jobs)
+            await send_email_notification(user_email, f"Job Radar: {total_jobs} jobs found for '{job['title']}'", html)
+            email_sent = True
+
+        return {
+            "id": str(result_id),
+            "total_jobs_found": total_jobs,
+            "results": scan_results,
+            "run_at": datetime.now(timezone.utc).isoformat(),
+            "email_sent": email_sent
+        }
+
+@api_router.post("/cron/run-all")
+async def run_all_cron_jobs(send_emails: bool = False, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        jobs = await conn.fetch(
+            "SELECT * FROM cron_searches WHERE user_id = $1 AND active = TRUE",
+            to_uuid(user['id'])
+        )
+        jobs_run = 0
+        total_found = 0
+        for job in jobs:
+            keywords = job['keywords'] if job['keywords'] else [job['title']]
+            all_sites = [s for s in JOB_SITES if s.get('active')]
+            semaphore = asyncio.Semaphore(5)
+            tasks = [scrape_single_site(site, keywords, semaphore) for site in all_sites]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            scan_results = [r for r in results if not isinstance(r, Exception)]
+            t = sum(len(r.get('jobs', [])) for r in scan_results)
+
+            result_id = uuid.uuid4()
+            await conn.execute(
+                """INSERT INTO cron_results (id, cron_id, keywords, results, total_jobs_found, run_at)
+                   VALUES ($1, $2, $3, $4, $5, $6)""",
+                result_id, job['id'], keywords, json.dumps(scan_results), t, datetime.now(timezone.utc)
+            )
+            await conn.execute(
+                "UPDATE cron_searches SET last_run = $1, results_count = $2 WHERE id = $3",
+                datetime.now(timezone.utc), t, job['id']
+            )
+            jobs_run += 1
+            total_found += t
+
+        return {"jobs_run": jobs_run, "total_found": total_found}
+
+@api_router.get("/cron/results/{job_id}")
+async def get_cron_results(job_id: str, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        results = await conn.fetch(
+            """SELECT cr.* FROM cron_results cr 
+               JOIN cron_searches cs ON cr.cron_id = cs.id 
+               WHERE cr.cron_id = $1 AND cs.user_id = $2 
+               ORDER BY cr.run_at DESC LIMIT 5""",
+            uuid.UUID(job_id), to_uuid(user['id'])
+        )
+        parsed = []
+        for r in results:
+            d = dict(r)
+            d['id'] = str(d['id'])
+            d['cron_id'] = str(d['cron_id'])
+            d['results'] = json.loads(d['results']) if isinstance(d['results'], str) else d['results']
+            parsed.append(d)
+        return parsed
+
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware, allow_credentials=True, 
                   allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),

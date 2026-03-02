@@ -28,7 +28,11 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
 
   const loadSearchLinks = async () => {
     try {
-      const res = await axios.get(`${API}/jobs/search-links`, { params: { keyword: rec.title } });
+      const token = localStorage.getItem("token");
+      const res = await axios.get(`${API}/jobs/search-links`, { 
+        params: { keyword: rec.title },
+        headers: { Authorization: `Bearer ${token}` }
+      });
       setSearchLinks(res.data || []);
     } catch (e) { /* ignore */ }
   };

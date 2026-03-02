@@ -767,21 +767,23 @@ async def delete_resume(resume_id: str, user: dict = Depends(require_user)):
 # ─── Job Scanning Routes ───
 class ScanRequest(BaseModel):
     keywords: Optional[List[str]] = None
+    resume_id: Optional[str] = None
 
 @api_router.post("/jobs/scan")
-async def scan_jobs(body: Optional[ScanRequest] = None, resume_id: Optional[str] = None, user: dict = Depends(require_user)):
+async def scan_jobs(req: ScanRequest = ScanRequest(), user: dict = Depends(require_user)):
     async with db_pool.acquire() as conn:
         # Use user-provided keywords if available
-        custom_keywords = body.keywords if body and body.keywords else None
+        keywords = None
+        if req.keywords and len(req.keywords) > 0:
+            keywords = req.keywords[:5]
+            logger.info(f"Using custom keywords: {keywords}")
         
-        if custom_keywords:
-            keywords = custom_keywords[:5]
-        else:
+        if not keywords:
             # Fall back to resume keywords
-            if resume_id:
+            if req.resume_id:
                 resume = await conn.fetchrow(
                     "SELECT * FROM resumes WHERE id = $1 AND user_id = $2",
-                    uuid.UUID(resume_id), to_uuid(user['id'])
+                    uuid.UUID(req.resume_id), to_uuid(user['id'])
                 )
             else:
                 resume = await conn.fetchrow(
@@ -795,6 +797,7 @@ async def scan_jobs(body: Optional[ScanRequest] = None, resume_id: Optional[str]
             keywords = analysis.get('keywords', [])[:5]
             if not keywords:
                 keywords = analysis.get('preferred_titles', [])[:3]
+            logger.info(f"Using resume keywords: {keywords}")
 
         all_sites = [s for s in JOB_SITES if s.get('active')]
         custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", to_uuid(user['id']))

@@ -988,7 +988,158 @@ async def delete_custom_site(site_id: str, user: dict = Depends(require_user)):
             raise HTTPException(status_code=404, detail="Site not found")
         return {"message": "Deleted"}
 
-# Continue with more routes...
+# ─── ATS Check Route ───
+@api_router.post("/ats/check")
+async def ats_check(req: ATSCheckRequest, user: dict = Depends(require_user)):
+    """Run ATS compatibility check for a resume against a job"""
+    async with db_pool.acquire() as conn:
+        resume = await conn.fetchrow(
+            "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+            to_uuid(user['id'])
+        )
+        if not resume:
+            raise HTTPException(status_code=400, detail="No resume found. Upload a resume first.")
+
+        resume_data = resume['analysis'] if isinstance(resume['analysis'], dict) else json.loads(resume['analysis'])
+        resume_skills = resume_data.get("skills", [])
+        resume_titles = resume_data.get("preferred_titles", [])
+
+        try:
+            chat = LlmChat(
+                api_key=LLM_KEY,
+                session_id=f"ats-{uuid.uuid4()}",
+                system_message="You are an ATS (Applicant Tracking System) expert. Respond with ONLY valid JSON."
+            ).with_model("gemini", "gemini-2.5-flash")
+
+            prompt = f"""Analyze this resume's compatibility with the target job.
+
+TARGET JOB: {req.job_title}
+JOB DESCRIPTION: {req.job_description or 'N/A'}
+
+CANDIDATE SKILLS: {', '.join(resume_skills)}
+CANDIDATE TITLES: {', '.join(resume_titles)}
+CANDIDATE SUMMARY: {resume_data.get('summary', '')}
+
+Return JSON:
+{{
+  "ats_score": 75,
+  "keyword_match": ["matched keywords"],
+  "missing_keywords": ["keywords to add"],
+  "format_issues": ["formatting problems"],
+  "suggestions": ["improvement suggestions"],
+  "keyword_density_ok": true,
+  "overall_verdict": "Good/Fair/Poor"
+}}"""
+
+            response = await chat.send_message(UserMessage(text=prompt))
+            result = parse_ai_json(response)
+
+            # Save to DB
+            check_id = uuid.uuid4()
+            await conn.execute(
+                """INSERT INTO ats_checks (id, user_id, job_title, ats_score, keyword_match, missing_keywords, format_issues, suggestions, keyword_density_ok, overall_verdict, created_at)
+                   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)""",
+                check_id, to_uuid(user['id']), req.job_title,
+                result.get('ats_score', 0),
+                result.get('keyword_match', []),
+                result.get('missing_keywords', []),
+                result.get('format_issues', []),
+                result.get('suggestions', []),
+                result.get('keyword_density_ok', True),
+                result.get('overall_verdict', 'Fair'),
+                datetime.now(timezone.utc)
+            )
+
+            return result
+        except Exception as e:
+            logger.error(f"ATS check failed: {e}")
+            raise HTTPException(status_code=500, detail=f"ATS check failed: {str(e)}")
+
+# ─── Statistics Route ───
+@api_router.get("/stats")
+async def get_stats(user: dict = Depends(require_user)):
+    """Get application statistics"""
+    async with db_pool.acquire() as conn:
+        total = await conn.fetchval(
+            "SELECT COUNT(*) FROM tracked_jobs WHERE user_id = $1", to_uuid(user['id'])
+        )
+        status_counts = await conn.fetch(
+            "SELECT status, COUNT(*) as count FROM tracked_jobs WHERE user_id = $1 GROUP BY status",
+            to_uuid(user['id'])
+        )
+        wishlist_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM wishlist WHERE user_id = $1", to_uuid(user['id'])
+        )
+        resumes_count = await conn.fetchval(
+            "SELECT COUNT(*) FROM resumes WHERE user_id = $1", to_uuid(user['id'])
+        )
+        recent_apps = await conn.fetch(
+            "SELECT date_posted, company, position, status FROM tracked_jobs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10",
+            to_uuid(user['id'])
+        )
+        return {
+            "total_applications": total or 0,
+            "status_breakdown": {row['status']: row['count'] for row in status_counts},
+            "wishlist_count": wishlist_count or 0,
+            "resumes_count": resumes_count or 0,
+            "recent_applications": [dict(r) for r in recent_apps]
+        }
+
+# ─── Export Route ───
+@api_router.get("/tracker/export")
+async def export_tracker(user: dict = Depends(require_user)):
+    """Export tracked jobs to Excel"""
+    async with db_pool.acquire() as conn:
+        jobs = await conn.fetch(
+            "SELECT * FROM tracked_jobs WHERE user_id = $1 ORDER BY created_at DESC",
+            to_uuid(user['id'])
+        )
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Job Applications"
+
+        headers = ["Date Posted", "Company", "Position", "Salary", "Location", "Technology",
+                   "Status", "Source", "Link", "Work Mode", "Contract Type", "Visa Sponsorship",
+                   "Date Applied", "Response Date", "Interview Stages", "Recruiter", "Notes"]
+        
+        header_fill = PatternFill(start_color="1e3a5f", end_color="1e3a5f", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        
+        for col, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+
+        for row, job in enumerate(jobs, 2):
+            j = dict(job)
+            ws.cell(row=row, column=1, value=j.get('date_posted', ''))
+            ws.cell(row=row, column=2, value=j.get('company', ''))
+            ws.cell(row=row, column=3, value=j.get('position', ''))
+            ws.cell(row=row, column=4, value=j.get('salary', ''))
+            ws.cell(row=row, column=5, value=j.get('location', ''))
+            ws.cell(row=row, column=6, value=j.get('technology', ''))
+            ws.cell(row=row, column=7, value=j.get('status', ''))
+            ws.cell(row=row, column=8, value=j.get('source', ''))
+            ws.cell(row=row, column=9, value=j.get('link', ''))
+            ws.cell(row=row, column=10, value=j.get('work_mode', ''))
+            ws.cell(row=row, column=11, value=j.get('contract_type', ''))
+            ws.cell(row=row, column=12, value=j.get('visa_sponsorship', ''))
+            ws.cell(row=row, column=13, value=j.get('date_applied', ''))
+            ws.cell(row=row, column=14, value=j.get('response_date', ''))
+            ws.cell(row=row, column=15, value=j.get('interview_stages', ''))
+            ws.cell(row=row, column=16, value=j.get('recruiter_name', ''))
+            ws.cell(row=row, column=17, value=j.get('notes', ''))
+
+        for col in range(1, len(headers) + 1):
+            ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = 18
+
+        export_path = EXPORT_DIR / f"job_tracker_{user['id']}.xlsx"
+        wb.save(str(export_path))
+        return FileResponse(str(export_path), filename="job_tracker_export.xlsx",
+                           media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
 app.include_router(api_router)
 app.add_middleware(CORSMiddleware, allow_credentials=True, 
                   allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),

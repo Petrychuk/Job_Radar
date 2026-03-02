@@ -63,7 +63,14 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
   const handleATSCheck = async () => {
     setCheckingAts(true);
     try {
-      const res = await axios.post(`${API}/ats/check`, { job_title: rec.title, job_description: rec.why_match || "" }, { timeout: 60000 });
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API}/ats/check`, { 
+        job_title: rec.title, 
+        job_description: rec.why_match || "" 
+      }, { 
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 60000 
+      });
       setAtsResult(res.data);
     } catch (e) { toast.error("ATS check failed. Upload a resume first."); }
     finally { setCheckingAts(false); }

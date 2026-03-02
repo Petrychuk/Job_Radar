@@ -90,11 +90,13 @@ export default function ResumeUpload() {
       await loadAllResumes();
       setSelectedResume(res.data);
       
-      // Automatically scan for jobs after resume analysis
-      await scanJobs(res.data.id);
+      // Automatically scan for jobs after resume analysis (optional)
+      // await scanJobs(res.data.id);
       
     } catch (err) {
       toast.error(err.response?.data?.detail || "Upload failed");
+      console.error("Upload error:", err);
+      console.error("Error response:", err.response);
     } finally {
       setUploading(false);
     }

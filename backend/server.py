@@ -765,26 +765,36 @@ async def delete_resume(resume_id: str, user: dict = Depends(require_user)):
         return {"message": "Resume deleted"}
 
 # ─── Job Scanning Routes ───
-@api_router.post("/jobs/scan")
-async def scan_jobs(resume_id: Optional[str] = None, user: dict = Depends(require_user)):
-    async with db_pool.acquire() as conn:
-        if resume_id:
-            resume = await conn.fetchrow(
-                "SELECT * FROM resumes WHERE id = $1 AND user_id = $2",
-                uuid.UUID(resume_id), to_uuid(user['id'])
-            )
-        else:
-            resume = await conn.fetchrow(
-                "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
-                to_uuid(user['id'])
-            )
-        if not resume:
-            raise HTTPException(status_code=400, detail="Upload a resume first")
+class ScanRequest(BaseModel):
+    keywords: Optional[List[str]] = None
 
-        analysis = resume['analysis'] if isinstance(resume['analysis'], dict) else json.loads(resume['analysis'])
-        keywords = analysis.get('keywords', [])[:5]
-        if not keywords:
-            keywords = analysis.get('preferred_titles', [])[:3]
+@api_router.post("/jobs/scan")
+async def scan_jobs(body: Optional[ScanRequest] = None, resume_id: Optional[str] = None, user: dict = Depends(require_user)):
+    async with db_pool.acquire() as conn:
+        # Use user-provided keywords if available
+        custom_keywords = body.keywords if body and body.keywords else None
+        
+        if custom_keywords:
+            keywords = custom_keywords[:5]
+        else:
+            # Fall back to resume keywords
+            if resume_id:
+                resume = await conn.fetchrow(
+                    "SELECT * FROM resumes WHERE id = $1 AND user_id = $2",
+                    uuid.UUID(resume_id), to_uuid(user['id'])
+                )
+            else:
+                resume = await conn.fetchrow(
+                    "SELECT * FROM resumes WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+                    to_uuid(user['id'])
+                )
+            if not resume:
+                raise HTTPException(status_code=400, detail="Upload a resume first or enter search keywords")
+
+            analysis = resume['analysis'] if isinstance(resume['analysis'], dict) else json.loads(resume['analysis'])
+            keywords = analysis.get('keywords', [])[:5]
+            if not keywords:
+                keywords = analysis.get('preferred_titles', [])[:3]
 
         all_sites = [s for s in JOB_SITES if s.get('active')]
         custom_sites = await conn.fetch("SELECT * FROM custom_sites WHERE user_id = $1", to_uuid(user['id']))
@@ -798,6 +808,25 @@ async def scan_jobs(resume_id: Optional[str] = None, user: dict = Depends(requir
         tasks = [scrape_single_site(site, keywords, semaphore) for site in all_sites]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         scan_results = [r for r in results if not isinstance(r, Exception)]
+
+        # Post-process: filter jobs by relevance to search keywords
+        kw_lower = [k.lower() for k in keywords]
+        for site_result in scan_results:
+            if site_result.get('jobs'):
+                scored_jobs = []
+                for job in site_result['jobs']:
+                    title_lower = job.get('title', '').lower()
+                    # Score: how many keywords appear in the title
+                    score = sum(1 for kw in kw_lower if kw in title_lower)
+                    # Also check partial word matches
+                    for kw in kw_lower:
+                        for word in kw.split():
+                            if len(word) > 3 and word in title_lower:
+                                score += 0.5
+                    scored_jobs.append((score, job))
+                # Keep only jobs with at least some relevance, sorted by score
+                scored_jobs.sort(key=lambda x: -x[0])
+                site_result['jobs'] = [j for score, j in scored_jobs if score > 0]
 
         scan_id = uuid.uuid4()
         await conn.execute(

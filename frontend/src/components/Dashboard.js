@@ -129,7 +129,7 @@ export default function Dashboard({ user, onLogout }) {
 
       {/* Footer */}
       <footer className="border-t border-white/5 py-3 px-6 bg-[#09090b]/80 relative z-10" data-testid="dashboard-footer">
-        <div className="max-w-[1400px] mx-auto flex flex-wrap justify-between items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap justify-between items-center gap-2 text-xs text-muted-foreground px-2 font-mono-data">
           <div className="flex items-center gap-4 font-mono-data">
             <span>JOB_RADAR <span className="text-primary">v2.0</span></span>
             <span className="hidden sm:inline">FastAPI + React + MongoDB</span>

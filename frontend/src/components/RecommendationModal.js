@@ -40,13 +40,17 @@ export default function RecommendationModal({ rec, open, onClose, onSave, onAppl
   const handleGenerateDocs = async (type) => {
     setGenerating(true);
     try {
-      const res = await axios.post(`${API}/documents/generate`, {
+      const token = localStorage.getItem("token");
+      const res = await axios.post(`${API}/wishlist/generate-docs`, {
         job_title: rec.title,
         company_type: rec.company_type,
         salary_range: rec.salary_range,
         why_match: rec.why_match,
         doc_type: type
-      }, { timeout: 120000 });
+      }, { 
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 120000 
+      });
       setGeneratedDocs(res.data);
       toast.success("Documents generated!");
     } catch (err) {

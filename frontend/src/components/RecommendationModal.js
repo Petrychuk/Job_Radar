@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ExternalLink, Heart, Briefcase, FileDown, Loader2, Globe, Copy, Download, Shield } from "lucide-react";
 import ATSReportDialog from "@/components/ATSReportDialog";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 
 export default function RecommendationModal({ rec, open, onClose, onSave, onApply }) {
   const [searchLinks, setSearchLinks] = useState([]);

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import MatrixBackground from "@/components/MatrixBackground";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 
 export default function ResetPassword() {
   const navigate = useNavigate();

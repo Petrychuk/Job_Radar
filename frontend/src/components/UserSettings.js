@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 
 export default function UserSettings({ user }) {
   const [settings, setSettings] = useState({

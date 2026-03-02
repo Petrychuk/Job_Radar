@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 
 const features = [
   { icon: Brain, title: "AI Resume Analysis", desc: "Upload your CV and get instant skill extraction, keyword matching, and career recommendations.", span: "md:col-span-4" },

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 const STATUSES = ["New", "Applied", "Interview", "Offer", "Rejected", "Withdrawn", "No Response"];
 const WORK_MODES = ["", "Remote", "Hybrid", "Onsite"];
 const CONTRACT_TYPES = ["", "Permanent", "Contract", "Casual", "Internship"];

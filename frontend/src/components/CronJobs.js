@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 
 export default function CronJobs({ user }) {
   const [jobs, setJobs] = useState([]);

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import RecommendationModal from "@/components/RecommendationModal";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 
 export default function Wishlist() {
   const [items, setItems] = useState([]);

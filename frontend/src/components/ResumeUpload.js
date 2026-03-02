@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import JobDetailModal from "@/components/JobDetailModal";
 import RecommendationModal from "@/components/RecommendationModal";
 
-const API = process.env.REACT_APP_BACKEND_URL;
+import API from '@/lib/api';
 
 export default function ResumeUpload() {
   const [file, setFile] = useState(null);

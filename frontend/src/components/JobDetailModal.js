@@ -113,31 +113,35 @@ export default function JobDetailModal({ job, open, onClose, onSave, onApply, on
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap gap-3 mb-6 pb-6 border-b border-white/10">
-          <Button
-            onClick={() => onSave(job)}
-            className="bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30"
-          >
-            <Heart className="w-4 h-4 mr-2" />
-            Save to Wishlist
-          </Button>
-          <Button
-            onClick={() => onApply(job)}
-            className="bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/30"
-          >
-            <Briefcase className="w-4 h-4 mr-2" />
-            Apply (Add to Tracker)
-          </Button>
+        <div className="space-y-4 mb-6 pb-6 border-b border-white/10">
+          {/* Primary Action - View Original Job */}
           {job.url && (
             <Button
               onClick={() => window.open(job.url, '_blank')}
-              variant="outline"
-              className="border-white/10 hover:border-primary/50"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-white text-base font-semibold shadow-[0_0_20px_rgba(59,130,246,0.4)]"
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
-              View Original
+              <ExternalLink className="w-5 h-5 mr-2" />
+              View Original Job & Apply
             </Button>
           )}
+          
+          {/* Secondary Actions */}
+          <div className="flex flex-wrap gap-3">
+            <Button
+              onClick={() => onSave && onSave(job)}
+              className="bg-pink-500/10 hover:bg-pink-500/20 text-pink-400 border border-pink-500/30"
+            >
+              <Heart className="w-4 h-4 mr-2" />
+              Save to Wishlist
+            </Button>
+            <Button
+              onClick={() => onApply && onApply(job)}
+              className="bg-secondary/10 hover:bg-secondary/20 text-secondary border border-secondary/30"
+            >
+              <Briefcase className="w-4 h-4 mr-2" />
+              Add to Tracker
+            </Button>
+          </div>
         </div>
 
         {/* Search on Job Sites */}

@@ -574,7 +574,7 @@ async def forgot_password(data: ForgotPasswordRequest):
         )
         
         # Send email with reset link
-        reset_link = f"https://19d1ab2d-7f68-46bf-987d-9e9c61d24cd9.preview.emergentagent.com/reset-password?token={reset_token}"
+        reset_link = f"https://resume-analysis-test.preview.emergentagent.com/reset-password?token={reset_token}"
         html_content = f"""
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#0a0a0a;color:#e5e5e5;padding:24px;border-radius:12px">
             <h1 style="color:#3b82f6;margin:0 0 8px 0">JOB_RADAR</h1>

@@ -80,14 +80,16 @@ export default function JobSearch() {
     setScanning(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.post(`${API}/jobs/scan`, {}, { 
+      // Send the user's search keyword to the scan endpoint
+      const body = keyword.trim() ? { keywords: keyword.trim().split(/[\s,]+/).filter(Boolean) } : {};
+      const res = await axios.post(`${API}/jobs/scan`, body, { 
         headers: { Authorization: `Bearer ${token}` },
         timeout: 120000 
       });
       setScanData(res.data);
       toast.success(`Scan complete! Found ${res.data.total_jobs_found} jobs across ${res.data.sites_scanned} sites`);
     } catch (err) {
-      toast.error(err.response?.data?.detail || "Scan failed. Upload a resume first.");
+      toast.error(err.response?.data?.detail || "Scan failed. Upload a resume first or enter search keywords.");
     } finally {
       setScanning(false);
     }

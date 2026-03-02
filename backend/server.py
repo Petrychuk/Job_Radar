@@ -459,29 +459,95 @@ async def scrape_single_site(site: dict, keywords: list, semaphore: asyncio.Sema
 
 def extract_jobs_generic(soup: BeautifulSoup, site: dict) -> list:
     jobs = []
-    seen = set()
-    job_keywords = ['developer', 'engineer', 'analyst', 'designer', 'manager', 'coordinator', 'administrator', 'consultant', 'specialist', 'intern', 'architect', 'lead', 'senior', 'junior', 'full stack', 'frontend', 'backend', 'devops', 'data', 'software', 'web', 'mobile', 'cloud', 'qa', 'test']
+    seen_urls = set()
+    seen_titles = set()
 
+    # Noise patterns — skip links matching these
+    noise_patterns = [
+        'sign in', 'sign up', 'log in', 'register', 'cookie', 'privacy', 'terms',
+        'about us', 'contact us', 'faq', 'help', 'blog', 'news', 'home', 'menu',
+        'career advice', 'salary guide', 'company reviews', 'browse', 'all jobs',
+        'see more', 'load more', 'next page', 'previous', 'subscribe', 'follow us',
+        'download app', 'mobile app', 'employer site', 'post a job', 'advertise',
+        'skip to', 'back to', 'go to', 'view all', 'show all', 'read more',
+    ]
+
+    # Job listing containers — prefer links inside these
+    listing_tags = soup.find_all(['article', 'li', 'div', 'section'], 
+        class_=lambda c: c and any(x in str(c).lower() for x in ['job', 'listing', 'result', 'card', 'vacancy', 'position', 'opening']))
+
+    # Collect candidate links from listing containers first, then fall back to all links
+    candidate_links = []
+    for container in listing_tags:
+        for link in container.find_all('a', href=True):
+            candidate_links.append((link, True))  # True = from job container
+    
+    # Also add all page links as fallback (lower priority)
     for link in soup.find_all('a', href=True):
+        candidate_links.append((link, False))
+
+    for link, from_container in candidate_links:
         text = link.get_text(strip=True)
         href = link['href']
-        if 8 < len(text) < 120 and any(kw in text.lower() for kw in job_keywords):
-            if text not in seen:
-                seen.add(text)
-                full_url = href if href.startswith('http') else f"{site['url']}{href}"
-                parent = link.find_parent(['article', 'div', 'li', 'section'])
-                company = ""
-                location = ""
-                if parent:
-                    for el in parent.find_all(['span', 'div', 'p'], limit=10):
-                        el_text = el.get_text(strip=True)
-                        if el_text != text and 2 < len(el_text) < 60:
-                            if not company and el_text != text:
-                                company = el_text
-                            elif not location:
-                                location = el_text
 
-                jobs.append({"title": text, "company": company, "location": location, "url": full_url, "source": site['name']})
+        # Skip empty, too short, or too long titles
+        if not text or len(text) < 10 or len(text) > 150:
+            continue
+
+        # Skip noise/navigation links
+        text_lower = text.lower()
+        if any(p in text_lower for p in noise_patterns):
+            continue
+
+        # Skip links that are just numbers, dates, or purely non-alpha
+        if not any(c.isalpha() for c in text):
+            continue
+
+        # Build full URL
+        full_url = href if href.startswith('http') else f"{site['url'].rstrip('/')}/{href.lstrip('/')}"
+
+        # Skip duplicates by URL and title
+        if full_url in seen_urls or text in seen_titles:
+            continue
+
+        # Skip fragment-only or javascript links
+        if href.startswith('#') or href.startswith('javascript:') or href == '/':
+            continue
+
+        # Extract company and location from parent container
+        company = ""
+        location = ""
+        parent = link.find_parent(['article', 'div', 'li', 'section'])
+        if parent:
+            for el in parent.find_all(['span', 'div', 'p', 'dd'], limit=15):
+                el_text = el.get_text(strip=True)
+                if el_text == text or len(el_text) < 2 or len(el_text) > 80:
+                    continue
+                # Skip if it looks like a tag/badge
+                if el_text.lower() in noise_patterns:
+                    continue
+                if not company and el_text != text:
+                    company = el_text
+                elif not location and el_text != company:
+                    location = el_text
+
+        seen_urls.add(full_url)
+        seen_titles.add(text)
+        jobs.append({
+            "title": text,
+            "company": company,
+            "location": location,
+            "url": full_url,
+            "source": site['name'],
+            "from_listing": from_container,
+        })
+
+    # Sort: jobs from listing containers first, then others
+    jobs.sort(key=lambda j: (0 if j.get('from_listing') else 1))
+    
+    # Clean up the internal flag
+    for j in jobs:
+        j.pop('from_listing', None)
 
     return jobs
 

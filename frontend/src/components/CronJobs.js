@@ -26,9 +26,14 @@ export default function CronJobs({ user }) {
 
   useEffect(() => { loadJobs(); }, []);
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return { Authorization: `Bearer ${token}` };
+  };
+
   const loadJobs = async () => {
     try {
-      const res = await axios.get(`${API}/cron/jobs`);
+      const res = await axios.get(`${API}/cron/jobs`, { headers: getAuthHeaders() });
       setJobs(res.data || []);
     } catch (e) {
       toast.error("Failed to load searches");
@@ -46,7 +51,7 @@ export default function CronJobs({ user }) {
         keywords: keywords.length > 0 ? keywords : [newTitle.trim()],
         location: newLocation,
         active: true
-      });
+      }, { headers: getAuthHeaders() });
       setJobs(prev => [res.data, ...prev]);
       setDialogOpen(false);
       setNewTitle(""); setNewKeywords(""); setNewLocation("Australia");
@@ -58,7 +63,7 @@ export default function CronJobs({ user }) {
 
   const handleDelete = async (id) => {
     try {
-      await axios.delete(`${API}/cron/jobs/${id}`);
+      await axios.delete(`${API}/cron/jobs/${id}`, { headers: getAuthHeaders() });
       setJobs(prev => prev.filter(j => j.id !== id));
       toast.success("Search removed");
     } catch (e) {
@@ -68,7 +73,7 @@ export default function CronJobs({ user }) {
 
   const handleToggle = async (id) => {
     try {
-      const res = await axios.put(`${API}/cron/jobs/${id}/toggle`);
+      const res = await axios.put(`${API}/cron/jobs/${id}/toggle`, {}, { headers: getAuthHeaders() });
       setJobs(prev => prev.map(j => j.id === id ? { ...j, active: res.data.active } : j));
     } catch (e) {
       toast.error("Failed to toggle");
@@ -85,7 +90,7 @@ export default function CronJobs({ user }) {
         params.append("user_email", userEmail);
       }
       const url = `${API}/cron/run/${id}${params.toString() ? `?${params.toString()}` : ''}`;
-      const res = await axios.post(url, {}, { timeout: 120000 });
+      const res = await axios.post(url, {}, { headers: getAuthHeaders(), timeout: 120000 });
       setJobs(prev => prev.map(j => j.id === id ? { ...j, last_run: res.data.run_at, results_count: res.data.total_jobs_found } : j));
       setResults(prev => ({ ...prev, [id]: res.data }));
       setExpandedId(id);
@@ -102,7 +107,7 @@ export default function CronJobs({ user }) {
     setRunningAll(true);
     try {
       const params = withEmails ? "?send_emails=true" : "";
-      const res = await axios.post(`${API}/cron/run-all${params}`, {}, { timeout: 300000 });
+      const res = await axios.post(`${API}/cron/run-all${params}`, {}, { headers: getAuthHeaders(), timeout: 300000 });
       toast.success(`Ran ${res.data.jobs_run} searches`);
       loadJobs();
     } catch (e) {
@@ -115,7 +120,7 @@ export default function CronJobs({ user }) {
   const loadResults = async (id) => {
     if (expandedId === id) { setExpandedId(null); return; }
     try {
-      const res = await axios.get(`${API}/cron/results/${id}`);
+      const res = await axios.get(`${API}/cron/results/${id}`, { headers: getAuthHeaders() });
       if (res.data?.length > 0) {
         setResults(prev => ({ ...prev, [id]: res.data[0] }));
       }
@@ -129,7 +134,7 @@ export default function CronJobs({ user }) {
         position: job.title, company: job.company || "", site_url: job.url || "",
         location: job.location || "", source: job.source || "", link: job.url || "",
         status: "New", date_posted: new Date().toISOString().split('T')[0],
-      });
+      }, { headers: getAuthHeaders() });
       toast.success(`Added "${job.title}" to tracker`);
     } catch (e) {
       toast.error("Failed to add");

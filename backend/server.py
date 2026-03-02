@@ -757,10 +757,31 @@ async def get_jobs(user: dict = Depends(require_user)):
         )
         if not scan:
             return None
+        
+        # Get hidden jobs to filter them out
+        hidden = await conn.fetch(
+            "SELECT title, url FROM hidden_jobs WHERE user_id = $1",
+            to_uuid(user['id'])
+        )
+        hidden_set = {(h['title'], h['url']) for h in hidden}
+        
         result = dict(scan)
         result['id'] = str(result['id'])
         result['user_id'] = str(result['user_id'])
-        result['results'] = json.loads(result['results']) if isinstance(result['results'], str) else result['results']
+        results_data = json.loads(result['results']) if isinstance(result['results'], str) else result['results']
+        
+        # Filter out hidden jobs from each site's results
+        if hidden_set:
+            for site_result in results_data:
+                if site_result.get('jobs'):
+                    site_result['jobs'] = [
+                        j for j in site_result['jobs']
+                        if (j.get('title', ''), j.get('url', '')) not in hidden_set
+                    ]
+            # Recalculate total
+            result['total_jobs_found'] = sum(len(r.get('jobs', [])) for r in results_data)
+        
+        result['results'] = results_data
         return result
 
 @api_router.get("/jobs/search-links")

@@ -227,10 +227,10 @@ export default function JobSearch() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
+        <h1 className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'Chivo, sans-serif' }}>
           JOB <span className="text-primary">SEARCH</span>
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">AI-powered scanning across {18 + customSites.length} job sites</p>
+        <p className="text-muted-foreground mt-1">AI-powered scanning across {18 + customSites.length} job sites</p>
       </div>
 
       {/* Scan + Search Controls */}

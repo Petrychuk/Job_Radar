@@ -1179,29 +1179,52 @@ Return JSON:
 async def get_stats(user: dict = Depends(require_user)):
     """Get application statistics"""
     async with db_pool.acquire() as conn:
-        total = await conn.fetchval(
-            "SELECT COUNT(*) FROM tracked_jobs WHERE user_id = $1", to_uuid(user['id'])
-        )
-        status_counts = await conn.fetch(
-            "SELECT status, COUNT(*) as count FROM tracked_jobs WHERE user_id = $1 GROUP BY status",
-            to_uuid(user['id'])
-        )
-        wishlist_count = await conn.fetchval(
-            "SELECT COUNT(*) FROM wishlist WHERE user_id = $1", to_uuid(user['id'])
-        )
-        resumes_count = await conn.fetchval(
-            "SELECT COUNT(*) FROM resumes WHERE user_id = $1", to_uuid(user['id'])
-        )
-        recent_apps = await conn.fetch(
-            "SELECT date_posted, company, position, status FROM tracked_jobs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10",
-            to_uuid(user['id'])
-        )
+        uid = to_uuid(user['id'])
+        total = await conn.fetchval("SELECT COUNT(*) FROM tracked_jobs WHERE user_id = $1", uid) or 0
+
+        status_rows = await conn.fetch(
+            "SELECT status, COUNT(*) as count FROM tracked_jobs WHERE user_id = $1 GROUP BY status", uid)
+        status_counts = {r['status']: r['count'] for r in status_rows}
+
+        source_rows = await conn.fetch(
+            "SELECT source, COUNT(*) as count FROM tracked_jobs WHERE user_id = $1 AND source IS NOT NULL AND source != '' GROUP BY source ORDER BY count DESC", uid)
+        source_counts = {r['source']: r['count'] for r in source_rows}
+
+        # Parse technology field (comma-separated) and count
+        tech_rows = await conn.fetch(
+            "SELECT technology FROM tracked_jobs WHERE user_id = $1 AND technology IS NOT NULL AND technology != ''", uid)
+        tech_counter = {}
+        for r in tech_rows:
+            for t in r['technology'].split(','):
+                t = t.strip()
+                if t:
+                    tech_counter[t] = tech_counter.get(t, 0) + 1
+        tech_counts = dict(sorted(tech_counter.items(), key=lambda x: -x[1])[:10])
+
+        # Response rate: anything beyond Applied/New
+        responded = sum(v for k, v in status_counts.items() if k not in ('New', 'Applied'))
+        response_rate = round((responded / total * 100) if total > 0 else 0, 1)
+
+        rejected = status_counts.get('Rejected', 0)
+        rejection_rate = round((rejected / total * 100) if total > 0 else 0, 1)
+
+        # Monthly trend
+        monthly_rows = await conn.fetch(
+            """SELECT TO_CHAR(created_at, 'YYYY-MM') as month, COUNT(*) as count 
+               FROM tracked_jobs WHERE user_id = $1 
+               GROUP BY month ORDER BY month DESC LIMIT 12""", uid)
+        monthly_trend = [{"month": r['month'], "count": r['count']} for r in reversed(monthly_rows)]
+
         return {
-            "total_applications": total or 0,
-            "status_breakdown": {row['status']: row['count'] for row in status_counts},
-            "wishlist_count": wishlist_count or 0,
-            "resumes_count": resumes_count or 0,
-            "recent_applications": [dict(r) for r in recent_apps]
+            "total": total,
+            "status_counts": status_counts,
+            "source_counts": source_counts,
+            "tech_counts": tech_counts,
+            "response_rate": response_rate,
+            "rejection_rate": rejection_rate,
+            "monthly_trend": monthly_trend,
+            "wishlist_count": await conn.fetchval("SELECT COUNT(*) FROM wishlist WHERE user_id = $1", uid) or 0,
+            "resumes_count": await conn.fetchval("SELECT COUNT(*) FROM resumes WHERE user_id = $1", uid) or 0,
         }
 
 # ─── Export Route ───
